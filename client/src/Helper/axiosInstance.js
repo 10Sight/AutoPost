@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1",
+    baseURL: import.meta.env.VITE_API_URL || "https://autopost-server-8yze.onrender.com/api/v1",
     withCredentials: true,
     headers: {
         "Content-Type": "application/json",
@@ -21,7 +21,7 @@ axiosInstance.interceptors.response.use(
             try {
                 // Attempt to refresh token
                 await axios.post(
-                    `${import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"}/auth/refresh-token`,
+                    `${import.meta.env.VITE_API_URL || "https://autopost-server-8yze.onrender.com"}/auth/refresh-token`,
                     {},
                     { withCredentials: true }
                 );
