@@ -14,7 +14,7 @@ export const SocketProvider = ({ children }) => {
     useEffect(() => {
         if (token && !socket) {
             // Establish connection
-            const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:8000', {
+            const newSocket = io(import.meta.env.VITE_API_URL || 'https://autopost-server-8yze.onrender.com', {
                 withCredentials: true,
             });
 
