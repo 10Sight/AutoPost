@@ -6,7 +6,7 @@ import { PLATFORM_RULES } from "./platformRules";
  * @param {string} platform - The target platform (instagram, facebook, etc.)
  * @returns {Object} - { isValid: boolean, warnings: string[], errors: string[] }
  */
-export const validateMediaForPlatform = (media, platform) => {
+export const validateMediaForPlatform = (media, platform, postType = "post") => {
     if (!media || !platform) return { isValid: true, warnings: [], errors: [] };
 
     const rules = PLATFORM_RULES[platform];
@@ -37,9 +37,31 @@ export const validateMediaForPlatform = (media, platform) => {
         if (platform === 'instagram') {
             // Instagram: 1:1 (Square), 4:5 (Vertical), 1.91:1 (Landscape)
             const allowed = [1, 0.8, 1.91];
-            const isMatch = allowed.some(r => Math.abs(ratio - r) < tolerance);
-            if (!isMatch) {
-                results.warnings.push(`Aspect ratio (${media.aspectRatio}) is not ideal for Instagram. It might be cropped or shown with borders.`);
+            
+            // SPECIAL: Stories/Reels MUST be vertical (9:16)
+            if (postType === 'story' || postType === 'reel') {
+                const is916 = Math.abs(ratio - (9 / 16)) < tolerance;
+                if (!is916) {
+                    results.warnings.push(`${postType === 'story' ? 'Stories' : 'Reels'} are best in 9:16 (vertical). Your media may be cropped or distorted.`);
+                }
+                
+                if (postType === 'reel' && !isVideo) {
+                    results.errors.push("Instagram Reels must be videos. Images are not supported for this format.");
+                    results.isValid = false;
+                }
+
+                if (isVideo && media.duration) {
+                    const limit = postType === 'story' ? 60 : 900; // 60s for story, 15m for reels
+                    if (media.duration > limit) {
+                        results.errors.push(`${postType === 'story' ? 'Story' : 'Reel'} duration (${media.duration.toFixed(0)}s) exceeds limit of ${limit}s.`);
+                        results.isValid = false;
+                    }
+                }
+            } else {
+                const isMatch = allowed.some(r => Math.abs(ratio - r) < tolerance);
+                if (!isMatch) {
+                    results.warnings.push(`Aspect ratio (${media.aspectRatio}) is not ideal for Instagram. It might be cropped or shown with borders.`);
+                }
             }
         } else if (platform === 'twitter') {
             // Twitter: 1:1 to 2:1 is safe, but wide is better
@@ -51,7 +73,19 @@ export const validateMediaForPlatform = (media, platform) => {
             const is169 = Math.abs(ratio - (16 / 9)) < tolerance;
             const is916 = Math.abs(ratio - (9 / 16)) < tolerance;
 
-            if (!is169 && !is916) {
+            if (postType === 'short') {
+                if (!is916) {
+                    results.warnings.push(`YouTube Shorts require a 9:16 vertical aspect ratio. Your video (${media.aspectRatio}) might not be processed as a Short.`);
+                }
+                if (!isVideo) {
+                    results.errors.push("YouTube Shorts must be videos. Images are not supported.");
+                    results.isValid = false;
+                }
+                if (isVideo && media.duration > 60) {
+                    results.errors.push(`Shorts must be under 60 seconds. Current duration: ${media.duration.toFixed(0)}s.`);
+                    results.isValid = false;
+                }
+            } else if (!is169 && !is916) {
                 results.warnings.push(`YouTube prefers 16:9 aspect ratio. Your video (${media.aspectRatio}) might have black bars.`);
             }
 

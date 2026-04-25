@@ -52,7 +52,7 @@ export default function PolicyRules() {
     const rules = data?.data || [];
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="p-4 md:p-8 pt-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Policy Rules</h1>
                 <p className="text-muted-foreground mt-1">
@@ -84,32 +84,32 @@ export default function PolicyRules() {
                             No rules defined for your organization yet.
                         </div>
                     ) : (
-                        <div className="rounded-md border border-border/50 overflow-hidden">
+                        <div className="rounded-md border border-border/50">
                             <Table>
                                 <TableHeader className="bg-muted/50">
                                     <TableRow>
-                                        <TableHead className="w-[200px]">Rule Name</TableHead>
-                                        <TableHead>Trigger</TableHead>
-                                        <TableHead>Conditions</TableHead>
-                                        <TableHead>System Actions</TableHead>
-                                        <TableHead className="text-right">Status</TableHead>
+                                        <TableHead className="w-[200px] whitespace-normal">Rule Name</TableHead>
+                                        <TableHead className="whitespace-normal">Trigger</TableHead>
+                                        <TableHead className="whitespace-normal">Conditions</TableHead>
+                                        <TableHead className="whitespace-normal">System Actions</TableHead>
+                                        <TableHead className="text-right whitespace-normal">Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {rules.map((rule) => (
                                         <TableRow key={rule._id} className="hover:bg-muted/30 transition-colors">
-                                            <TableCell className="font-semibold">
+                                            <TableCell className="font-semibold whitespace-normal">
                                                 <div className="flex flex-col">
                                                     <span>{rule.name}</span>
-                                                    <span className="text-[10px] text-muted-foreground font-normal whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]">
+                                                    <span className="text-[10px] text-muted-foreground font-normal">
                                                         {rule.description}
                                                     </span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="whitespace-normal">
                                                 {getTriggerBadge(rule.trigger)}
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="whitespace-normal">
                                                 <div className="flex flex-wrap gap-1">
                                                     {rule.conditions.length > 0 ? rule.conditions.map((cond, i) => (
                                                         <Badge key={i} variant="secondary" className="text-[10px] font-mono px-1.5 py-0 h-auto">
@@ -118,18 +118,18 @@ export default function PolicyRules() {
                                                     )) : <span className="text-[10px] text-muted-foreground italic">No conditions (Always trigger)</span>}
                                                 </div>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="whitespace-normal">
                                                 <div className="space-y-1">
                                                     {rule.actions.map((action, i) => (
                                                         <div key={i} className="flex items-center gap-2 text-xs">
                                                             {getActionTypeIcon(action.type)}
                                                             <span className="font-medium text-[10px] text-gray-500 uppercase">{action.type}:</span>
-                                                            <span className="text-muted-foreground line-clamp-1">{action.message}</span>
+                                                            <span className="text-muted-foreground">{action.message}</span>
                                                         </div>
                                                     ))}
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-right">
+                                            <TableCell className="text-right whitespace-normal">
                                                 <Badge className={rule.active ? "bg-green-500/10 text-green-500 hover:bg-green-500/20" : "bg-gray-500/10 text-gray-500"}>
                                                     {rule.active ? "Enabled" : "Disabled"}
                                                 </Badge>

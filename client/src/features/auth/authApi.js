@@ -44,6 +44,37 @@ export const authApiSlice = apiSlice.injectEndpoints({
             }),
             providesTags: ["User"],
         }),
+        changePassword: builder.mutation({
+            query: (data) => ({
+                url: "/users/change-password",
+                method: "POST",
+                body: data,
+            }),
+            invalidatesTags: ["User"],
+        }),
+        updateProfile: builder.mutation({
+            query: (data) => ({
+                url: "/users/update-account",
+                method: "PATCH",
+                body: data,
+            }),
+            invalidatesTags: ["User"],
+        }),
+        updateUserRole: builder.mutation({
+            query: ({ userId, role }) => ({
+                url: "/users/role",
+                method: "PATCH",
+                body: { userId, role },
+            }),
+            invalidatesTags: ["User"],
+        }),
+        deleteUser: builder.mutation({
+            query: (userId) => ({
+                url: `/users/${userId}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: ["User"],
+        }),
     }),
 });
 
@@ -54,4 +85,8 @@ export const {
     useGetCurrentUserQuery,
     useGetAllUsersQuery,
     useCreateUserMutation,
+    useChangePasswordMutation,
+    useUpdateProfileMutation,
+    useUpdateUserRoleMutation,
+    useDeleteUserMutation,
 } = authApiSlice;

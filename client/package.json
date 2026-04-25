@@ -15,6 +15,8 @@
     "test:run": "vitest run"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@hookform/resolvers": "^5.2.2",
     "@reduxjs/toolkit": "^2.11.2",
     "axios": "^1.13.5",
@@ -22,6 +24,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
+    "fabric": "^7.3.1",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.563.0",
     "next-themes": "^0.4.6",
@@ -31,6 +34,7 @@
     "react-dom": "^19.2.0",
     "react-dropzone": "^15.0.0",
     "react-hook-form": "^7.71.1",
+    "react-image-crop": "^11.0.10",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.13.0",
     "recharts": "^3.7.0",

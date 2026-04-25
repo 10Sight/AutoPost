@@ -53,6 +53,7 @@ const getYouTubeAuthUrl = asyncHandler(async (req, res) => {
         scope: [
             "https://www.googleapis.com/auth/youtube.upload",
             "https://www.googleapis.com/auth/youtube.readonly",
+            "https://www.googleapis.com/auth/youtube.force-ssl",
         ],
         state: state,
         prompt: "consent",
@@ -152,6 +153,18 @@ const getChannelInfo = asyncHandler(async (req, res) => {
         throw new ApiError(404, "YouTube account not connected");
     }
 
+    // Refresh stats to ensure real-time accuracy in dashboard
+    try {
+        const freshStats = await youtubeService.getChannelStats(account);
+        account.metadata = {
+            ...account.metadata,
+            statistics: freshStats
+        };
+        await account.save();
+    } catch (error) {
+        logger.warn(`[YouTube] Background stats refresh failed in getChannelInfo: ${error.message}`);
+    }
+
     return res
         .status(200)
         .json(new ApiResponse(200, account, "Channel info fetched successfully"));
@@ -233,15 +246,20 @@ const validateVideo = asyncHandler(async (req, res) => {
 const scheduleYouTubePost = asyncHandler(async (req, res) => {
     const {
         socialAccountId,
-        mediaId,
+        mediaId: inputMediaId,
+        mediaIds,
         caption,
         scheduledAt,
         youtubePrivacyStatus,
         youtubeTags,
         youtubeCategoryId,
         youtubeThumbnailUrl,
-        publishAt
+        publishAt,
+        postType,
+        thumbnailMediaId
     } = req.body;
+
+    const mediaId = inputMediaId || (mediaIds && mediaIds.length > 0 ? mediaIds[0] : null);
 
     if (!socialAccountId || !mediaId || !scheduledAt) {
         throw new ApiError(400, "socialAccountId, mediaId, and scheduledAt are required");
@@ -258,9 +276,10 @@ const scheduleYouTubePost = asyncHandler(async (req, res) => {
     if (media.duration > rules.maxDuration) throw new ApiError(400, "Video exceeds 12 hour limit");
 
     // 2. Validate Metadata (Title based on first line, then tags/description)
-    const lines = caption.split("\n");
+    const safeCaption = caption || "";
+    const lines = safeCaption.split("\n");
     const title = lines[0] || "Untitled Video";
-    const description = lines.slice(1).join("\n") || caption;
+    const description = lines.slice(1).join("\n") || safeCaption;
 
     const metadataValidation = validateYouTubeMetadata({
         title,
@@ -288,19 +307,32 @@ const scheduleYouTubePost = asyncHandler(async (req, res) => {
     const estimatedCost = 1600 + (youtubeThumbnailUrl ? 50 : 0);
     await youtubeService.checkQuotaAvailability(req.user.organizationId, estimatedCost);
 
+    // Resolve thumbnail URL from media library if provided
+    let finalThumbnailUrl = youtubeThumbnailUrl;
+    if (thumbnailMediaId) {
+        const thumbMedia = await Media.findById(thumbnailMediaId);
+        if (thumbMedia) {
+            finalThumbnailUrl = thumbMedia.url;
+        }
+    }
+
     const post = await ScheduledPost.create({
         userId: req.user._id,
         organizationId: req.user.organizationId,
         socialAccountId,
         platform: "youtube",
+        postType: postType || "post",
         mediaId,
+        mediaIds: mediaIds || [mediaId],
         caption,
         scheduledAt,
         status: req.user.role === "creator" ? "pending_approval" : "scheduled",
         youtubePrivacyStatus,
         youtubeTags,
         youtubeCategoryId,
-        youtubeThumbnailUrl,
+        youtubeThumbnailUrl: finalThumbnailUrl,
+        thumbnailUrl: finalThumbnailUrl,
+        thumbnailMediaId,
         publishAt: publishAt || scheduledAt // Default to scheduledAt if publishAt not provided
     });
 

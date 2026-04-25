@@ -17,16 +17,30 @@ const scheduledPostSchema = new Schema(
             type: Schema.Types.ObjectId,
             ref: "SocialAccount",
             required: true,
+            index: true,
         },
         platform: {
             type: String,
             enum: ["instagram", "facebook", "linkedin", "x", "youtube"],
             required: true,
         },
+        postType: {
+            type: String,
+            enum: ["post", "story", "reel", "short"],
+            default: "post",
+        },
+        platformUserId: {
+            type: String, // Stable ID from the platform (e.g. Page ID or User ID)
+            index: true,
+        },
         mediaId: {
             type: Schema.Types.ObjectId,
             ref: "Media",
         },
+        mediaIds: [{
+            type: Schema.Types.ObjectId,
+            ref: "Media",
+        }],
         caption: {
             type: String,
         },
@@ -37,7 +51,7 @@ const scheduledPostSchema = new Schema(
         },
         status: {
             type: String,
-            enum: ["draft", "pending_approval", "approved", "scheduled", "processing", "rejected", "published", "failed", "cancelled"],
+            enum: ["draft", "pending_approval", "approved", "scheduled", "processing", "rejected", "published", "posted", "failed", "cancelled"],
             default: "draft",
             index: true,
         },
@@ -107,12 +121,35 @@ const scheduledPostSchema = new Schema(
         youtubeThumbnailUrl: {
             type: String,
         },
+        thumbnailUrl: {
+            type: String,
+        },
+        thumbnailMediaId: {
+            type: Schema.Types.ObjectId,
+            ref: "Media",
+        },
         publishAt: {
             type: Date,
+        },
+        failReason: {
+            type: String,
+        },
+        platformResponse: {
+            type: Schema.Types.Mixed,
         },
     },
     {
         timestamps: true,
+        toJSON: { 
+            virtuals: true,
+            transform: (doc, ret) => {
+                // Production-level field aliasing for frontend compatibility
+                if (ret.socialAccountId) ret.socialAccount = ret.socialAccountId;
+                if (ret.mediaId) ret.media = ret.mediaId;
+                return ret;
+            }
+        },
+        toObject: { virtuals: true }
     }
 );
 

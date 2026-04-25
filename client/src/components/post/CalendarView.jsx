@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import {
     format,
     startOfMonth,
@@ -24,7 +24,7 @@ import {
     TooltipTrigger,
 } from "../ui/tooltip";
 
-const CalendarView = ({ posts, onDateClick }) => {
+const CalendarView = memo(({ posts, onDateClick }) => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
 
     const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
@@ -43,8 +43,21 @@ const CalendarView = ({ posts, onDateClick }) => {
 
     const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+    // Optimize: Group posts by date once when posts change
+    const postsByDate = useMemo(() => {
+        const map = {};
+        posts.forEach(post => {
+            if (!post.scheduledAt) return;
+            const dateKey = format(new Date(post.scheduledAt), 'yyyy-MM-dd');
+            if (!map[dateKey]) map[dateKey] = [];
+            map[dateKey].push(post);
+        });
+        return map;
+    }, [posts]);
+
     const getPostsForDay = (day) => {
-        return posts.filter(post => isSameDay(new Date(post.scheduledAt), day));
+        const dateKey = format(day, 'yyyy-MM-dd');
+        return postsByDate[dateKey] || [];
     };
 
     const statusColors = {
@@ -147,7 +160,7 @@ const CalendarView = ({ posts, onDateClick }) => {
             </div>
         </div>
     );
-};
+});
 
 const PlusIcon = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>

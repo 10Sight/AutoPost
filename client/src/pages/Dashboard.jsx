@@ -24,7 +24,9 @@ import {
     BarChart3,
     Sparkles,
     MessageSquare,
-    Share2
+    Share2,
+    ChevronLeft,
+    ChevronRight
 } from "lucide-react";
 
 import {
@@ -45,12 +47,25 @@ import YouTubeChannelCard from "../components/usage/YouTubeChannelCard";
 import {
     Area,
     AreaChart,
+    Bar,
+    BarChart,
     CartesianGrid,
+    Cell,
     ResponsiveContainer,
     Tooltip,
     XAxis,
     YAxis,
 } from "recharts";
+
+import { useGetGroupsQuery } from "../features/accountGroups/accountGroupsApi";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "../components/ui/select";
+import { Filter } from "lucide-react";
 
 const PlatformIcon = ({ platform }) => {
     switch (platform?.toLowerCase()) {
@@ -63,20 +78,77 @@ const PlatformIcon = ({ platform }) => {
 };
 
 const Dashboard = () => {
+    const scrollRef = React.useRef(null);
     const { data: user } = useGetCurrentUserQuery();
-    const { data: postsData, isLoading: postsLoading } = useGetScheduledPostsQuery(
-        { limit: 5, sort: '-scheduledAt' }
-    );
-    const { data: accountsData, isLoading: accountsLoading } =
-        useGetConnectedAccountsQuery();
-    const { data: statsData, isLoading: statsLoading } = useGetDashboardStatsQuery();
+
+    const [selectedGroup, setSelectedGroup] = React.useState(() => {
+        return localStorage.getItem("lastSelectedDashboardGroup") || "all";
+    });
+
+    const { data: groupsData } = useGetGroupsQuery();
+
+    React.useEffect(() => {
+        localStorage.setItem("lastSelectedDashboardGroup", selectedGroup);
+    }, [selectedGroup]);
+
+    const { data: postsData, isLoading: postsLoading } = useGetScheduledPostsQuery({ 
+        limit: 5, 
+        sort: '-scheduledAt',
+        groupId: selectedGroup !== "all" ? selectedGroup : undefined
+    });
+    
+    const { data: accountsData, isLoading: accountsLoading } = useGetConnectedAccountsQuery();
+    
+    const { data: statsData, isLoading: statsLoading, isFetching: statsFetching } = useGetDashboardStatsQuery({
+        groupId: selectedGroup !== "all" ? selectedGroup : undefined
+    });
+
+    const scroll = (direction) => {
+        if (scrollRef.current) {
+            const { scrollLeft, clientWidth } = scrollRef.current;
+            const scrollTo = direction === 'left' ? scrollLeft - clientWidth : scrollLeft + clientWidth;
+            scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+        }
+    };
 
     const stats = statsData?.data?.stats || { total: 0, pending: 0, posted: 0, failed: 0 };
     const chartData = statsData?.data?.chartData || [];
-    const connectedAccounts = accountsData?.data?.length || 0;
+    
+    // Resolve which accounts belong to the current filter
+    const currentGroup = groupsData?.data?.find(g => g._id === selectedGroup);
+    
+    // memoize the account ID extraction to handle both populated objects and raw IDs
+    const groupAccountIds = React.useMemo(() => {
+        if (!currentGroup?.accounts) return [];
+        return currentGroup.accounts.map(acc => (typeof acc === "object" ? acc._id : acc));
+    }, [currentGroup]);
+
+    const filteredAccounts = React.useMemo(() => {
+        const allAccounts = accountsData?.data || [];
+        if (selectedGroup === "all") return allAccounts;
+        
+        // Use a Set for O(1) lookups if the group has many accounts for production-level performance
+        const idSet = new Set(groupAccountIds);
+        return allAccounts.filter(acc => idSet.has(acc._id));
+    }, [selectedGroup, accountsData, groupAccountIds]);
+
+    const connectedAccounts = filteredAccounts.length;
+
+    // Calculate reach for filtered accounts
+    const totalReach = filteredAccounts.reduce((acc, account) => {
+        const platformStats = account.metadata?.statistics || {};
+        const platform = account.platform?.toLowerCase();
+        
+        if (platform === "youtube") return acc + parseInt(platformStats.subscriberCount || 0);
+        if (platform === "x") return acc + (platformStats.followers_count || 0);
+        if (platform === "linkedin") return acc + (platformStats.followerCount || 0);
+        if (platform === "instagram") return acc + (platformStats.follower_count || 0);
+        if (platform === "facebook") return acc + (platformStats.follower_count || 0);
+        return acc;
+    }, 0) || 0;
 
     return (
-        <div className="flex-1 space-y-8 p-4 md:p-8 pt-6 max-w-[1600px] mx-auto">
+        <div className={`flex-1 space-y-8 p-4 md:p-8 pt-6 max-w-[1600px] mx-auto transition-opacity duration-300 ${statsFetching ? 'opacity-70' : 'opacity-100'}`}>
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
@@ -89,28 +161,61 @@ const Dashboard = () => {
                         <span>{format(new Date(), "EEEE, MMMM do, yyyy")}</span>
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button asChild className="shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
+                <div className="flex flex-wrap items-center gap-3">
+                    {/* Group Filter Selector - Refined Premium Design */}
+                    <div className="flex items-center gap-2 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-md p-1.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60 shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/30 group/select">
+                        <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+                            <SelectTrigger className="w-[180px] h-8 border-none bg-transparent text-xs font-semibold text-slate-600 dark:text-slate-400 focus:ring-0 transition-colors group-hover/select:text-primary">
+                                <div className="flex items-center">
+                                    <Filter className="h-3.5 w-3.5 mr-2.5 text-primary/60 group-hover/select:text-primary transition-colors" />
+                                    <SelectValue placeholder="Select Group" />
+                                </div>
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                                <SelectItem value="all" className="text-xs font-semibold text-slate-500 hover:text-primary transition-colors cursor-pointer rounded-lg mx-1">
+                                    Global View
+                                </SelectItem>
+                                <div className="h-px bg-slate-100 dark:bg-slate-800 my-1 mx-2" />
+                                {groupsData?.data?.map((group) => (
+                                    <SelectItem 
+                                        key={group._id} 
+                                        value={group._id} 
+                                        className="text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-primary transition-colors cursor-pointer rounded-lg mx-1"
+                                    >
+                                        {group.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <Button asChild className="h-10 rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all font-bold">
                         <Link to="/dashboard/create">
-                            <Plus className="mr-2 h-4 w-4" /> Create New Post
+                            <Plus className="mr-2 h-4 w-4" /> Create Post
                         </Link>
                     </Button>
                 </div>
             </div>
-
             {/* Stats Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <StatCard
-                    title="Total Posts"
-                    value={stats.total}
-                    icon={Activity}
-                    description="All time posts"
-                    loading={statsLoading}
+                    title="Total Audience"
+                    value={totalReach}
+                    icon={Users}
+                    description="Reach across platforms"
+                    loading={accountsLoading}
+                    iconBgColor="bg-blue-100 dark:bg-blue-900/20"
+                    iconColor="text-blue-600 dark:text-blue-400"
+                    gradientFrom="from-white dark:from-gray-900"
+                    gradientTo="to-blue-50 dark:to-blue-900/10"
+                    borderColor="border-blue-100 dark:border-blue-900/50"
+                    textColor="text-gray-600 dark:text-gray-400"
+                    valueColor="text-gray-900 dark:text-gray-100"
                 />
                 <StatCard
                     title="Connected Accounts"
                     value={connectedAccounts}
-                    icon={Users}
+                    icon={Share2}
                     description="Active profiles"
                     loading={accountsLoading}
                     iconBgColor="bg-purple-100 dark:bg-purple-900/20"
@@ -151,59 +256,152 @@ const Dashboard = () => {
                 />
             </div>
 
+
+
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
                 {/* Chart Section */}
-                <Card className="col-span-4 border-gray-200 dark:border-gray-800 shadow-sm">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <BarChart3 className="h-5 w-5 text-primary" />
-                            Performance Overview
-                        </CardTitle>
+                <Card className="col-span-4 border-gray-200 dark:border-gray-800 shadow-sm flex flex-col">
+                    <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg font-bold flex items-center gap-2">
+                                <Activity className="h-5 w-5 text-primary" />
+                                Performance Overview
+                            </CardTitle>
+                            <Badge variant="outline" className="text-[10px] uppercase font-bold text-gray-400">7-Day Analysis</Badge>
+                        </div>
                         <CardDescription>
-                            Your posting activity trends over the last 7 days.
+                            Your posting activity trends and platform distribution.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="pl-2">
-                        <ResponsiveContainer width="100%" height={350}>
-                            <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <XAxis
-                                    dataKey="name"
-                                    stroke="#888888"
-                                    fontSize={12}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    dy={10}
-                                />
-                                <YAxis
-                                    stroke="#888888"
-                                    fontSize={12}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickFormatter={(value) => `${value}`}
-                                    dx={-10}
-                                />
-                                <Tooltip
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                    cursor={{ stroke: '#2563eb', strokeWidth: 1, strokeDasharray: '5 5' }}
-                                />
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" className="stroke-gray-100 dark:stroke-gray-800" />
-                                <Area
-                                    type="monotone"
-                                    dataKey="total"
-                                    stroke="#2563eb"
-                                    strokeWidth={3}
-                                    fillOpacity={1}
-                                    fill="url(#colorTotal)"
-                                    activeDot={{ r: 6, strokeWidth: 0 }}
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
+                    <CardContent className="flex-1 pb-6 space-y-12">
+                        {/* Trend Chart */}
+                        <div className="flex flex-col pt-4">
+                            <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Volume Activity</h4>
+                            <div className="flex-1">
+                                <ResponsiveContainer width="100%" height={280}>
+                                    <AreaChart data={chartData}>
+                                        <defs>
+                                            <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1} />
+                                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <XAxis 
+                                            dataKey="name" 
+                                            axisLine={false} 
+                                            tickLine={false} 
+                                            tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
+                                            dy={10}
+                                        />
+                                        <YAxis hide />
+                                        <Tooltip 
+                                            content={({ active, payload }) => {
+                                                if (active && payload && payload.length) {
+                                                    return (
+                                                        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-gray-100 dark:border-gray-800 p-3 rounded-xl shadow-xl">
+                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{payload[0].payload.date}</p>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="h-2 w-2 rounded-full bg-primary" />
+                                                                <p className="text-sm font-bold">{payload[0].value} Posts</p>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+                                                return null;
+                                            }}
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="total"
+                                            stroke="#6366f1"
+                                            strokeWidth={3}
+                                            fillOpacity={1}
+                                            fill="url(#colorTotal)"
+                                            dot={{ r: 4, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }}
+                                            activeDot={{ r: 6, fill: '#6366f1', strokeWidth: 0 }}
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* Platform performance chart */}
+                        <div className="flex flex-col border-t border-gray-100 dark:border-gray-800 pt-10">
+                            <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Platform Performance</h4>
+                            <div className="flex-1">
+                                <ResponsiveContainer width="100%" height={280}>
+                                    <AreaChart data={chartData}>
+                                        <defs>
+                                            <linearGradient id="colorInstagram" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#e1306c" stopOpacity={0.1}/><stop offset="95%" stopColor="#e1306c" stopOpacity={0}/></linearGradient>
+                                            <linearGradient id="colorFacebook" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#1877f2" stopOpacity={0.1}/><stop offset="95%" stopColor="#1877f2" stopOpacity={0}/></linearGradient>
+                                            <linearGradient id="colorLinkedin" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0a66c2" stopOpacity={0.1}/><stop offset="95%" stopColor="#0a66c2" stopOpacity={0}/></linearGradient>
+                                            <linearGradient id="colorYoutube" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#ff0000" stopOpacity={0.1}/><stop offset="95%" stopColor="#ff0000" stopOpacity={0}/></linearGradient>
+                                            <linearGradient id="colorX" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#000000" stopOpacity={0.1}/><stop offset="95%" stopColor="#000000" stopOpacity={0}/></linearGradient>
+                                        </defs>
+                                        <XAxis 
+                                            dataKey="name" 
+                                            axisLine={false} 
+                                            tickLine={false} 
+                                            tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
+                                            dy={10}
+                                        />
+                                        <YAxis hide />
+                                        <Tooltip 
+                                            content={({ active, payload }) => {
+                                                if (active && payload && payload.length) {
+                                                    const date = payload[0].payload.date;
+                                                    const platformsList = [
+                                                        { name: 'Instagram', key: 'instagram', color: '#e1306c' },
+                                                        { name: 'Facebook', key: 'facebook', color: '#1877f2' },
+                                                        { name: 'LinkedIn', key: 'linkedin', color: '#0a66c2' },
+                                                        { name: 'YouTube', key: 'youtube', color: '#ff0000' },
+                                                        { name: 'X', key: 'x', color: '#000000' }
+                                                    ];
+                                                    
+                                                    return (
+                                                        <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border border-gray-100 dark:border-gray-800 p-3 rounded-xl shadow-xl min-w-[150px]">
+                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 pb-1 border-b border-gray-100 dark:border-gray-800">{date}</p>
+                                                            <div className="space-y-2">
+                                                                {platformsList.map(p => (
+                                                                    <div key={p.key} className="flex items-center justify-between gap-4">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
+                                                                            <span className="text-[11px] font-bold text-gray-600 dark:text-gray-400">{p.name}</span>
+                                                                        </div>
+                                                                        <span className="text-xs font-black">{payload[0].payload[p.key] || 0}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+                                                return null;
+                                            }}
+                                        />
+                                        {[
+                                            { key: 'instagram', color: '#e1306c', grad: 'colorInstagram' },
+                                            { key: 'facebook', color: '#1877f2', grad: 'colorFacebook' },
+                                            { key: 'linkedin', color: '#0a66c2', grad: 'colorLinkedin' },
+                                            { key: 'youtube', color: '#ff0000', grad: 'colorYoutube' },
+                                            { key: 'x', color: '#000000', grad: 'colorX' }
+                                        ].map(p => (
+                                            <Area
+                                                key={p.key}
+                                                type="monotone"
+                                                dataKey={p.key}
+                                                stroke={p.color}
+                                                strokeWidth={2.5}
+                                                fillOpacity={1}
+                                                fill={`url(#${p.grad})`}
+                                                dot={false}
+                                                activeDot={{ r: 4, strokeWidth: 0 }}
+                                                stackId="1"
+                                            />
+                                        ))}
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
 

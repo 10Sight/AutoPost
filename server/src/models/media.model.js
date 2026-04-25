@@ -13,6 +13,18 @@ const mediaSchema = new Schema(
             required: true,
             index: true,
         },
+        groupId: {
+            type: Schema.Types.ObjectId,
+            ref: "AccountGroup",
+            index: true,
+            default: null,
+        },
+        folderId: {
+            type: Schema.Types.ObjectId,
+            ref: "MediaFolder",
+            default: null,
+            index: true,
+        },
         url: {
             type: String,
             required: true,

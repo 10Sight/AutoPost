@@ -67,6 +67,10 @@ const usageSchema = new Schema(
             type: Number,
             default: 0,
         },
+        lastYoutubeQuotaReset: {
+            type: Date,
+            default: () => new Date(0), // Default to epoch to force first-time reset
+        },
     },
     {
         timestamps: true,

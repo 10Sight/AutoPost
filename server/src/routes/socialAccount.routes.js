@@ -12,6 +12,6 @@ router.use(verifyJWT); // Apply verifyJWT to all routes
 
 router.route("/").get(getConnectedAccounts).post(connectAccount);
 router.post("/connect", connectAccount); // Explicit route for frontend compatibility
-router.route("/:platform").delete(disconnectAccount);
+router.route("/:id").delete(disconnectAccount);
 
 export default router;

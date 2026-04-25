@@ -16,6 +16,10 @@ export const initAuditSubscriber = () => {
                 action: action,
                 entityId: data.postId || data.accountId, // Flexible based on event
                 entityType: data.accountId ? "SocialAccount" : "ScheduledPost",
+                socialAccountId: data.socialAccountId || data.accountId,
+                groupId: data.groupId,
+                ipAddress: data.ipAddress,
+                userAgent: data.userAgent,
                 metadata: data,
             });
 

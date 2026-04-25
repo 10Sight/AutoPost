@@ -19,6 +19,10 @@ const postVersionSchema = new Schema(
             type: Schema.Types.ObjectId,
             ref: "Media",
         },
+        mediaIds: [{
+            type: Schema.Types.ObjectId,
+            ref: "Media",
+        }],
         scheduledAt: {
             type: Date,
             required: true,

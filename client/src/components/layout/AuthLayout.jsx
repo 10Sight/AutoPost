@@ -1,54 +1,86 @@
 import React from "react";
-import { Outlet } from "react-router-dom";
-import { Sparkles, Calendar, BarChart3, Share2 } from "lucide-react";
+import { Outlet, Link } from "react-router-dom";
+import { Sparkles, Calendar, BarChart3, Users, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Button } from "../ui/button";
 
 const AuthLayout = () => {
+    const { theme, setTheme } = useTheme();
+
     return (
-        <div className="flex min-h-screen bg-white dark:bg-gray-950 overflow-hidden font-sans">
-            {/* Left Side: Visual/Branding Panel (Hidden on mobile) */}
-            <div className="hidden lg:flex lg:w-1/2 relative bg-primary overflow-hidden items-center justify-center">
-                {/* Background Patterns/Gradients */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-primary/90 z-0" />
-                <div className="absolute top-[-10%] left-[-10%] w-80 h-80 bg-white/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-blue-400/20 rounded-full blur-3xl opacity-50" />
-                <div className="absolute inset-0 z-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
+        <div className="flex h-screen w-full bg-white dark:bg-slate-950 overflow-hidden font-sans select-none">
+            {/* Left Side: Visual/Branding Panel */}
+            <div className="hidden lg:flex lg:w-[50%] relative bg-[#f7f8ff] dark:bg-slate-900 overflow-hidden flex-col">
+                {/* Subtle Decorative Shapes */}
+                <div className="absolute top-[-10%] right-[-10%] w-[60%] h-[60%] bg-[#e0e7ff] dark:bg-blue-900/10 rounded-full blur-[100px] opacity-60" />
+                <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#f3e8ff] dark:bg-purple-900/10 rounded-full blur-[80px] opacity-60" />
 
-                <div className="relative z-10 p-12 max-w-xl text-white">
-                    <div className="flex items-center gap-3 mb-8">
-                        <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl">
-                            <Sparkles className="h-8 w-8 text-white" />
+                {/* Logo Area - Compact */}
+                <div className="pt-8 px-12 relative z-10">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                            <Sparkles className="h-6 w-6 text-white" />
                         </div>
-                        <h1 className="text-3xl font-bold tracking-tight">AutoSocial</h1>
+                        <span className="text-2xl font-bold text-[#1e293b] dark:text-white tracking-tight">AutoPost</span>
                     </div>
+                </div>
 
-                    <h2 className="text-4xl lg:text-5xl font-extrabold leading-tight mb-8">
-                        The smarter way to <span className="text-blue-200">schedule</span> and <span className="text-blue-200">grow</span>.
-                    </h2>
-
-                    <div className="space-y-6">
-                        {[
-                            { icon: Calendar, text: "Schedule weeks of content in minutes." },
-                            { icon: BarChart3, text: "Track performance across all platforms." },
-                            { icon: Share2, text: "Manage all accounts from one dashboard." }
-                        ].map((feature, idx) => (
-                            <div key={idx} className="flex items-center gap-4 group cursor-default">
-                                <div className="p-2 bg-white/10 rounded-lg group-hover:bg-white/20 transition-colors duration-300">
-                                    <feature.icon className="h-5 w-5" />
-                                </div>
-                                <p className="text-lg text-white/90 font-medium">{feature.text}</p>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="mt-16 p-6 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10">
-                        <p className="italic text-white/80">
-                            "AutoSocial has completely transformed how we handle our social presence. Automated, effortless, and effective."
+                {/* Main Content Area - Center Justified */}
+                <div className="flex-1 flex flex-col justify-center px-16 relative z-10 overflow-hidden">
+                    <div className="max-w-xl space-y-3 animate-geometric-reveal">
+                        <div className="space-y-0.5">
+                            <h1 className="text-[64px] font-bold text-[#1e293b] dark:text-white leading-[1.05] tracking-tight">
+                                Post smarter,
+                            </h1>
+                            <h1 className="text-[64px] font-bold leading-[1.05] tracking-tight text-gradient-primary">
+                                not harder.
+                            </h1>
+                        </div>
+                        <p className="text-lg font-medium text-slate-400 dark:text-slate-500 max-w-md leading-relaxed">
+                            Plan, schedule, and publish content across all your platforms in one place.
                         </p>
-                        <div className="mt-4 flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-blue-300" />
+
+                        {/* Illustration - Original Size, controlled by container */}
+                        <div className="relative pt-8 px-2">
+                            <div className="relative z-10 animate-float">
+                                <img
+                                    src="/branding/login-visual-final.png"
+                                    alt="AutoPost Dashboard"
+                                    className="w-full h-auto drop-shadow-[0_35px_60px_-15px_rgba(37,99,235,0.2)]"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bottom Features Showcase - Compact */}
+                <div className="pb-10 pt-4 px-12 relative z-10">
+                    <div className="grid grid-cols-3 gap-6">
+                        <div className="flex flex-col gap-2">
+                            <div className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center">
+                                <Calendar className="w-5 h-5 text-blue-600" />
+                            </div>
                             <div>
-                                <p className="text-sm font-bold">Sarah Jenkins</p>
-                                <p className="text-xs text-white/60">Digital Marketer</p>
+                                <h3 className="text-[13px] font-bold text-[#1e293b] dark:text-white">Smart Scheduling</h3>
+                                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 leading-tight">Auto-post at the best time for engagement</p>
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <div className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center">
+                                <BarChart3 className="w-5 h-5 text-[#8b5cf6]" />
+                            </div>
+                            <div>
+                                <h3 className="text-[13px] font-bold text-[#1e293b] dark:text-white">Analytics</h3>
+                                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 leading-tight">Track performance and grow your audience</p>
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <div className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center">
+                                <Users className="w-5 h-5 text-[#6366f1]" />
+                            </div>
+                            <div>
+                                <h3 className="text-[13px] font-bold text-[#1e293b] dark:text-white">Team Collaboration</h3>
+                                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 leading-tight">Work together and stay organized</p>
                             </div>
                         </div>
                     </div>
@@ -56,27 +88,25 @@ const AuthLayout = () => {
             </div>
 
             {/* Right Side: Auth Forms */}
-            <div className="flex flex-col flex-1 items-center justify-center p-6 sm:p-12 relative overflow-y-auto">
-                {/* Mobile Logo Only */}
-                <div className="lg:hidden absolute top-8 left-0 right-0 flex justify-center items-center gap-2 mb-8">
-                    <div className="p-2 bg-primary rounded-xl">
-                        <Sparkles className="h-6 w-6 text-white" />
+            <div className="flex-1 relative flex flex-col bg-white dark:bg-slate-950">
+                {/* Header with Theme Toggle */}
+                <header className="p-8 flex justify-end relative z-10">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                        className="rounded-full gap-2 border-slate-200 dark:border-slate-800 font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all"
+                    >
+                        {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                        <span>Dark mode</span>
+                    </Button>
+                </header>
+
+                <main className="flex-1 flex flex-col items-center justify-center px-12 relative z-10">
+                    <div className="w-full max-w-[420px] animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <Outlet />
                     </div>
-                    <span className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">AutoSocial</span>
-                </div>
-
-                <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    <Outlet />
-
-                    <footer className="mt-12 text-center text-gray-500 text-sm">
-                        <p>&copy; {new Date().getFullYear()} AutoSocial Inc. All rights reserved.</p>
-                        <div className="flex justify-center gap-4 mt-2">
-                            <a href="#" className="hover:text-primary transition-colors duration-200">Privacy</a>
-                            <a href="#" className="hover:text-primary transition-colors duration-200">Terms</a>
-                            <a href="#" className="hover:text-primary transition-colors duration-200">Help</a>
-                        </div>
-                    </footer>
-                </div>
+                </main>
             </div>
         </div>
     );

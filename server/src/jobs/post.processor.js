@@ -33,7 +33,7 @@ export const processPost = async (postId) => {
             { _id: postId, status: { $in: ["pending", "scheduled", "failed"] } },
             { $set: { status: "processing" } },
             { returnDocument: "after" }
-        ).populate("mediaId");
+        ).populate("mediaId").populate("mediaIds");
 
         if (!post) {
             logger.warn(`Post ${postId} could not be locked (already processing or not pending). Skipping.`);
@@ -60,7 +60,12 @@ export const processPost = async (postId) => {
             return;
         }
 
-        const mediaUrl = post.mediaId ? post.mediaId.url : null;
+        // Ensure backward compatibility: populate mediaIds if empty but mediaId exists (safeguard)
+        if (post.mediaIds && post.mediaIds.length === 0 && post.mediaId) {
+            post.mediaIds = [post.mediaId];
+        }
+
+        const mediaUrl = post.mediaIds && post.mediaIds.length > 0 ? post.mediaIds[0].url : null;
 
         // Platform-specific validation and logging
         if (post.platform === "youtube") {
@@ -94,13 +99,15 @@ export const processPost = async (postId) => {
             }
         }
 
-        post.status = post.platform === "youtube" ? "scheduled" : "posted"; // YouTube posts are technically 'scheduled' on their end until public
+        post.status = "posted";
         post.platformPostId = result.id;
         post.error = null; // Clear any previous errors
         await post.save();
 
         eventBus.emit(EVENTS.POST_PUBLISHED, {
             postId: post._id,
+            organizationId: post.organizationId,
+            userId: post.userId,
             platform: post.platform,
             platformPostId: result.id,
         });
@@ -131,6 +138,8 @@ export const processPost = async (postId) => {
                 if (postForAccount) {
                     eventBus.emit(EVENTS.SOCIAL_ACCOUNT_EXPIRED, {
                         accountId: postForAccount.socialAccountId,
+                        organizationId: postForAccount.organizationId,
+                        userId: postForAccount.userId,
                         platform: postForAccount.platform,
                         error: error.message
                     });
@@ -159,10 +168,13 @@ export const processPost = async (postId) => {
                     postToUpdate.retryCount += 1;
                     postToUpdate.nextRetryAt = calculateBackoff(postToUpdate.retryCount);
                     postToUpdate.status = "failed"; // Mark as failed temporarily
-                    postToUpdate.error = `Attempt ${postToUpdate.retryCount} failed: ${error.message}`;
+                    postToUpdate.failReason = `Attempt ${postToUpdate.retryCount} failed: ${error.message}`;
+                    postToUpdate.platformResponse = error.response?.data || null;
 
                     eventBus.emit(EVENTS.POST_RETRY_SCHEDULED, {
                         postId: postToUpdate._id,
+                        organizationId: postToUpdate.organizationId,
+                        userId: postToUpdate.userId,
                         retryCount: postToUpdate.retryCount,
                         nextRetryAt: postToUpdate.nextRetryAt,
                         error: error.message
@@ -172,11 +184,14 @@ export const processPost = async (postId) => {
                 } else {
                     postToUpdate.status = "failed";
                     postToUpdate.nextRetryAt = undefined; // No more retries
-                    postToUpdate.error = error.message;
+                    postToUpdate.failReason = error.message;
+                    postToUpdate.platformResponse = error.response?.data || null;
 
                     // Emit POST_FAILED only on final failure or non-retryable error
                     eventBus.emit(EVENTS.POST_FAILED, {
                         postId: postToUpdate._id,
+                        organizationId: postToUpdate.organizationId,
+                        userId: postToUpdate.userId,
                         error: error.message,
                         retryCount: postToUpdate.retryCount
                     });

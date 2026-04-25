@@ -3,7 +3,16 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 
 export const authorizeRoles = (...allowedRoles) => {
     return asyncHandler(async (req, _, next) => {
-        if (!req.user || !allowedRoles.includes(req.user.role)) {
+        if (!req.user) {
+            throw new ApiError(401, "Authentication required");
+        }
+
+        // 🚀 Superadmin Bypass: Superadmins have global authority
+        if (req.user.role === "superadmin") {
+            return next();
+        }
+
+        if (!allowedRoles.includes(req.user.role)) {
             throw new ApiError(403, "Access denied. You do not have permission to perform this action.");
         }
         next();

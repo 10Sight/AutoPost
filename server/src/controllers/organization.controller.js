@@ -39,4 +39,27 @@ const updateOrganizationBranding = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, organization, "Organization branding updated successfully"));
 });
 
-export { getOrganizationDetails, updateOrganizationBranding };
+const getPublicBranding = asyncHandler(async (req, res) => {
+    // req.organization is populated by tenantMiddleware
+    const organization = req.organization;
+
+    if (!organization) {
+        throw new ApiError(404, "Organization not found in this context");
+    }
+
+    // Return ONLY public branding data
+    const publicData = {
+        name: organization.name,
+        branding: organization.branding || {}
+    };
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, publicData, "Public branding fetched successfully"));
+});
+
+export { 
+    getOrganizationDetails, 
+    updateOrganizationBranding,
+    getPublicBranding
+};

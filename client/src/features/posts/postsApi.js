@@ -3,9 +3,9 @@ import { apiSlice } from "../../app/api";
 export const scheduledPostApiSlice = apiSlice.injectEndpoints({
     endpoints: (builder) => ({
         getScheduledPosts: builder.query({
-            query: ({ page = 1, limit = 10, status } = {}) => ({
+            query: ({ page = 1, limit = 10, status, socialAccountId, groupId, platform, search, startDate, endDate } = {}) => ({
                 url: "/scheduled-posts",
-                params: { page, limit, status },
+                params: { page, limit, status, socialAccountId, groupId, platform, search, startDate, endDate },
             }),
             providesTags: ["ScheduledPost"],
         }),
@@ -18,8 +18,9 @@ export const scheduledPostApiSlice = apiSlice.injectEndpoints({
             invalidatesTags: ["ScheduledPost"],
         }),
         getDashboardStats: builder.query({
-            query: () => ({
+            query: ({ groupId } = {}) => ({
                 url: "/scheduled-posts/stats",
+                params: { groupId },
             }),
             providesTags: ["ScheduledPost"],
         }),
@@ -31,8 +32,9 @@ export const scheduledPostApiSlice = apiSlice.injectEndpoints({
             invalidatesTags: ["ScheduledPost"],
         }),
         getAnalytics: builder.query({
-            query: () => ({
+            query: ({ days = 30, groupId } = {}) => ({
                 url: "/scheduled-posts/analytics",
+                params: { days, groupId }
             }),
             providesTags: ["ScheduledPost"],
         }),
@@ -41,6 +43,12 @@ export const scheduledPostApiSlice = apiSlice.injectEndpoints({
                 url: "/scheduled-posts/suggestions",
                 params: { platform },
             }),
+        }),
+        getAccountStats: builder.query({
+            query: (accountId) => ({
+                url: `/scheduled-posts/account/${accountId}/stats`,
+            }),
+            providesTags: ["ScheduledPost"],
         }),
         bulkCreateScheduledPosts: builder.mutation({
             query: (formData) => ({
@@ -79,6 +87,12 @@ export const scheduledPostApiSlice = apiSlice.injectEndpoints({
             }),
             invalidatesTags: (result, error, { postId }) => ["ScheduledPost", { type: "PostVersion", id: postId }],
         }),
+        getPostById: builder.query({
+            query: (postId) => ({
+                url: `/scheduled-posts/${postId}`,
+            }),
+            providesTags: (result, error, postId) => [{ type: "ScheduledPost", id: postId }],
+        }),
     }),
 });
 
@@ -89,9 +103,11 @@ export const {
     useGetDashboardStatsQuery,
     useGetAnalyticsQuery,
     useGetSmartSuggestionsQuery,
+    useGetAccountStatsQuery,
     useBulkCreateScheduledPostsMutation,
     useUpdatePostStatusMutation,
     useGetPostVersionsQuery,
     useRollbackPostVersionMutation,
     useUpdateScheduledPostMutation,
+    useGetPostByIdQuery,
 } = scheduledPostApiSlice;

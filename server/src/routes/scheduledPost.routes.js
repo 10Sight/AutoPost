@@ -11,6 +11,8 @@ import {
     updateScheduledPost,
     getPostVersions,
     rollbackPostVersion,
+    getAccountStats,
+    getScheduledPostById,
 } from "../controllers/scheduledPost.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { authorizeRoles } from "../middlewares/authorize.middleware.js";
@@ -23,9 +25,11 @@ router.use(verifyJWT);
 router.route("/stats").get(getDashboardStats);
 router.route("/analytics").get(getAnalytics);
 router.route("/suggestions").get(getSmartSuggestions);
+router.route("/account/:accountId/stats").get(getAccountStats);
 router.route("/bulk").post(upload.single("file"), bulkCreateScheduledPosts);
 router.route("/").get(getScheduledPosts).post(createScheduledPost);
 router.route("/:postId")
+    .get(getScheduledPostById)
     .patch(updateScheduledPost)
     .delete(deleteScheduledPost);
 

@@ -1,14 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useLoginMutation } from "../features/auth/authApi";
-import { setCredentials } from "../features/auth/authSlice";
 import { useDispatch } from "react-redux";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, Mail, Lock, Github, Chrome } from "lucide-react";
+import { Loader2, Mail, Lock, Github, Chrome, Facebook, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
+import { useLoginMutation } from "../features/auth/authApi";
+import { setCredentials } from "../features/auth/authSlice";
 import { Button } from "../components/ui/button";
 import {
     Form,
@@ -19,14 +19,7 @@ import {
     FormMessage,
 } from "../components/ui/form";
 import { Input } from "../components/ui/input";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-    CardFooter,
-} from "../components/ui/card";
+import { Checkbox } from "../components/ui/checkbox";
 
 const formSchema = z.object({
     email: z.string().email({
@@ -41,6 +34,7 @@ const Login = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const dispatch = useDispatch();
+    const [showPassword, setShowPassword] = useState(false);
     const from = location.state?.from?.pathname || "/dashboard";
 
     const [login, { isLoading }] = useLoginMutation();
@@ -71,116 +65,139 @@ const Login = () => {
     };
 
     return (
-        <Card className="border-none shadow-none bg-transparent">
-            <CardHeader className="space-y-2 pb-8 text-center sm:text-left">
-                <CardTitle className="text-3xl font-extrabold tracking-tight">Welcome back</CardTitle>
-                <CardDescription className="text-base">
-                    Enter your credentials to manage your social presence.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <Form {...form}>
-                    <form
-                        onSubmit={form.handleSubmit(onSubmit)}
-                        className="space-y-5"
-                    >
-                        <FormField
-                            control={form.control}
-                            name="email"
-                            render={({ field }) => (
-                                <FormItem className="space-y-1">
-                                    <FormLabel className="text-sm font-semibold text-gray-700 dark:text-gray-300">Email</FormLabel>
-                                    <FormControl>
-                                        <div className="relative group">
-                                            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400 group-focus-within:text-primary transition-colors">
-                                                <Mail className="h-4 w-4" />
-                                            </div>
-                                            <Input
-                                                placeholder="name@example.com"
-                                                className="pl-10 h-11 bg-gray-50/50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 focus:bg-white dark:focus:bg-gray-900 transition-all"
-                                                {...field}
-                                            />
+        <div className="space-y-7">
+            <div className="space-y-1.5 text-left">
+                <h2 className="text-[32px] font-bold tracking-tight text-[#1e293b] dark:text-white leading-tight">
+                    Welcome back 👋
+                </h2>
+                <p className="text-[15px] font-medium text-slate-400 dark:text-slate-500">
+                    Sign in to your AutoPost account
+                </p>
+            </div>
+
+            {/* Social Logins */}
+            <div className="grid grid-cols-3 gap-3.5">
+                <Button variant="outline" className="h-[54px] border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all font-semibold rounded-xl gap-2.5 shadow-sm group">
+                    <Chrome className="h-5 w-5 text-[#DB4437]" />
+                    <span className="text-[13px] text-slate-600 dark:text-slate-300">Google</span>
+                </Button>
+                <Button variant="outline" className="h-[54px] border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all font-semibold rounded-xl gap-2.5 shadow-sm group">
+                    <Facebook className="h-5 w-5 text-[#1877F2]" />
+                    <span className="text-[13px] text-slate-600 dark:text-slate-300">Facebook</span>
+                </Button>
+                <Button variant="outline" className="h-[54px] border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all font-semibold rounded-xl gap-2.5 shadow-sm group">
+                    <Github className="h-5 w-5 text-slate-900 dark:text-white" />
+                    <span className="text-[13px] text-slate-600 dark:text-slate-300">GitHub</span>
+                </Button>
+            </div>
+
+            <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-slate-100 dark:border-slate-800" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white dark:bg-slate-950 px-4 text-slate-400 font-medium tracking-wider">
+                        or continue with email
+                    </span>
+                </div>
+            </div>
+
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                            <FormItem className="space-y-1.5">
+                                <FormLabel className="text-[13px] font-bold text-slate-700 dark:text-slate-300">Email address</FormLabel>
+                                <FormControl>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                                            <Mail className="h-4 w-4" />
                                         </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="password"
-                            render={({ field }) => (
-                                <FormItem className="space-y-1">
-                                    <div className="flex items-center justify-between">
-                                        <FormLabel className="text-sm font-semibold text-gray-700 dark:text-gray-300">Password</FormLabel>
-                                        <Link to="#" className="text-xs font-medium text-primary hover:underline">Forgot password?</Link>
+                                        <Input
+                                            placeholder="admin123"
+                                            className="pl-11 h-12 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-blue-500/20 transition-all rounded-xl font-medium"
+                                            {...field}
+                                        />
                                     </div>
-                                    <FormControl>
-                                        <div className="relative group">
-                                            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400 group-focus-within:text-primary transition-colors">
-                                                <Lock className="h-4 w-4" />
-                                            </div>
-                                            <Input
-                                                type="password"
-                                                placeholder="••••••••"
-                                                className="pl-10 h-11 bg-gray-50/50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 focus:bg-white dark:focus:bg-gray-900 transition-all"
-                                                {...field}
-                                            />
+                                </FormControl>
+                                <FormMessage className="text-[11px]" />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                            <FormItem className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <FormLabel className="text-[13px] font-bold text-slate-700 dark:text-slate-300">Password</FormLabel>
+                                    <Link to="#" className="text-[12px] font-bold text-blue-600 hover:text-blue-500 transition-colors">
+                                        Forgot password?
+                                    </Link>
+                                </div>
+                                <FormControl>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                                            <Lock className="h-4 w-4" />
                                         </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <Button
-                            type="submit"
-                            className="w-full h-11 text-base font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all hover:scale-[1.01]"
-                            disabled={isLoading}
-                        >
-                            {isLoading ? (
-                                <>
-                                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                    Signing in...
-                                </>
-                            ) : (
-                                "Sign In"
-                            )}
-                        </Button>
-                    </form>
-                </Form>
+                                        <Input
+                                            type={showPassword ? "text" : "password"}
+                                            placeholder="••••••••"
+                                            className="pl-11 pr-11 h-12 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-blue-500/20 transition-all rounded-xl font-medium"
+                                            {...field}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute inset-y-0 right-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                                        >
+                                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </button>
+                                    </div>
+                                </FormControl>
+                                <FormMessage className="text-[11px]" />
+                            </FormItem>
+                        )}
+                    />
 
-                <div className="relative py-4">
-                    <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t border-gray-200 dark:border-gray-800" />
+                    <div className="flex items-center space-x-2.5 pt-1">
+                        <Checkbox id="remember" className="rounded-md border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 h-[18px] w-[18px]" />
+                        <label htmlFor="remember" className="text-[13px] font-bold text-slate-400 dark:text-slate-500 select-none cursor-pointer">
+                            Remember me
+                        </label>
                     </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-white dark:bg-gray-950 px-2 text-gray-500">Or continue with</span>
-                    </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <Button variant="outline" className="h-11 border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all font-semibold">
-                        <Chrome className="mr-2 h-4 w-4" />
-                        Google
+                    <Button
+                        type="submit"
+                        className="w-full h-[54px] text-base font-bold shadow-lg shadow-blue-500/20 transition-all rounded-xl bg-[#5a67f2] hover:bg-[#4c59e6] text-white gap-2.5 mt-3"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                            <>
+                                Sign in
+                                <ArrowRight className="h-4 w-4" />
+                            </>
+                        )}
                     </Button>
-                    <Button variant="outline" className="h-11 border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all font-semibold">
-                        <Github className="mr-2 h-4 w-4" />
-                        GitHub
-                    </Button>
-                </div>
-            </CardContent>
-            <CardFooter className="flex flex-col space-y-4 text-center pt-2">
-                <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                </form>
+            </Form>
+
+            <div className="text-center pt-3">
+                <p className="text-sm text-slate-400 dark:text-slate-500 font-bold">
                     Don&apos;t have an account?{" "}
                     <Link
                         to="/auth/register"
-                        className="text-primary hover:underline font-bold transition-all"
+                        className="text-blue-600 hover:text-blue-500 transition-colors"
                     >
-                        Create an account
+                        Create account
                     </Link>
-                </div>
-            </CardFooter>
-        </Card>
+                </p>
+            </div>
+        </div>
     );
 };
 

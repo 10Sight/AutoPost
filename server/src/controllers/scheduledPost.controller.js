@@ -13,6 +13,10 @@ import { MEDIA_RULES } from "../utils/mediaRules.js";
 import { validateLimit, updateUsage } from "../services/usage.service.js";
 import { Media } from "../models/media.model.js";
 import { evaluateRules } from "../services/ruleEngine.service.js";
+import { getFilteredPosts, getPostStatsSummary } from "../services/post.service.js";
+import mongoose from "mongoose";
+import { logger } from "../utils/logger.js";
+import { AccountGroup } from "../models/accountGroup.model.js";
 
 const validateMediaCompatibility = (media, platform) => {
     const rules = MEDIA_RULES[platform.toLowerCase()];
@@ -75,6 +79,7 @@ const createVersion = async (post, userId, changeLog = "") => {
         versionNumber,
         caption: post.caption,
         mediaId: post.mediaId,
+        mediaIds: post.mediaIds,
         scheduledAt: post.scheduledAt,
         platform: post.platform,
         createdBy: userId,
@@ -83,7 +88,7 @@ const createVersion = async (post, userId, changeLog = "") => {
 };
 
 const createScheduledPost = asyncHandler(async (req, res) => {
-    const { socialAccountId, platform, mediaId, caption, scheduledAt } =
+    const { socialAccountId, platform, postType, mediaId, mediaIds: inputMediaIds, caption, scheduledAt, thumbnailMediaId } =
         req.body;
 
     if (!socialAccountId || !platform || !scheduledAt) {
@@ -114,24 +119,55 @@ const createScheduledPost = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Scheduled time must be in the future");
     }
 
-    let media = null;
-    let mediaIntelligenceWarnings = [];
-    if (mediaId) {
-        media = await Media.findById(mediaId);
-        if (!media) throw new ApiError(404, "Media not found");
-
-        const compatibility = validateMediaCompatibility(media, platform);
-        if (compatibility.errors.length > 0) {
-            throw new ApiError(400, compatibility.errors[0], compatibility.errors);
+    let finalMediaIds = inputMediaIds || (mediaId ? [mediaId] : []);
+    let thumbnailUrl = null;
+    if (thumbnailMediaId) {
+        const thumbMedia = await Media.findById(thumbnailMediaId);
+        if (thumbMedia) {
+            thumbnailUrl = thumbMedia.url;
         }
-        mediaIntelligenceWarnings = compatibility.warnings;
+    }
+
+    // Check global limitation: All Images OR All Videos
+    let mediaItems = [];
+    let mediaIntelligenceWarnings = [];
+
+    if (finalMediaIds.length > 0) {
+        mediaItems = await Media.find({ _id: { $in: finalMediaIds } });
+        if (mediaItems.length !== finalMediaIds.length) {
+            throw new ApiError(404, "One or more Media items not found");
+        }
+
+        // Platform-specific validations
+        if (platform.toLowerCase() === "youtube" && mediaItems.length > 1) {
+            throw new ApiError(400, "YouTube requires exactly one video media item.");
+        }
+
+        // Enforce homogeneous carousel
+        const hasVideo = mediaItems.some(m => m.type === "video");
+        const hasImage = mediaItems.some(m => m.type === "image");
+        if (hasVideo && hasImage) {
+            throw new ApiError(400, "Mixed media (combining images and videos) is not supported. Please select only images or only videos.");
+        }
+        if (platform.toLowerCase() === "youtube" && !hasVideo) {
+            throw new ApiError(400, "YouTube requires a video for posting.");
+        }
+
+        // Validate each item individually
+        for (const media of mediaItems) {
+            const compatibility = validateMediaCompatibility(media, platform);
+            if (compatibility.errors.length > 0) {
+                throw new ApiError(400, compatibility.errors[0], compatibility.errors);
+            }
+            mediaIntelligenceWarnings.push(...compatibility.warnings);
+        }
     }
 
     // Evaluate Rules
     const ruleResults = await evaluateRules(
         req.user.organizationId,
         "BEFORE_SCHEDULE",
-        { caption, platform, scheduledAt, media }
+        { caption, platform, scheduledAt, media: mediaItems[0] } // Legacy rule testing with primary map
     );
 
     if (ruleResults.block.length > 0) {
@@ -147,9 +183,14 @@ const createScheduledPost = asyncHandler(async (req, res) => {
         organizationId: req.user.organizationId,
         socialAccountId,
         platform,
-        mediaId,
+        postType: postType || "post",
+        platformUserId: account.platformUserId,
+        mediaId: finalMediaIds[0] || null, // legacy compat
+        mediaIds: finalMediaIds,
         caption,
         scheduledAt,
+        thumbnailUrl,
+        thumbnailMediaId,
         status: initialStatus,
         approvalHistory: isCreator ? [{
             action: "submitted",
@@ -164,12 +205,22 @@ const createScheduledPost = asyncHandler(async (req, res) => {
     // Usage Tracking: Increment post count
     await updateUsage(req.user.organizationId, 'posts', 1, 'inc');
 
+    // Resolve group for auditing context (production level scalability)
+    const associatedGroup = await AccountGroup.findOne({ 
+        organizationId: req.user.organizationId, 
+        accounts: socialAccountId 
+    }).select("_id");
+
     eventBus.emit(EVENTS.POST_CREATED, {
         postId: post._id,
         userId: req.user._id,
         organizationId: req.user.organizationId,
+        socialAccountId: post.socialAccountId,
+        groupId: associatedGroup?._id,
         platform: post.platform,
         scheduledAt: post.scheduledAt,
+        ipAddress: req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress,
+        userAgent: req.headers["user-agent"],
     });
 
     return res
@@ -182,7 +233,7 @@ const createScheduledPost = asyncHandler(async (req, res) => {
 
 const updateScheduledPost = asyncHandler(async (req, res) => {
     const { postId } = req.params;
-    const { caption, mediaId, scheduledAt, changeLog } = req.body;
+    const { caption, mediaId, mediaIds: inputMediaIds, scheduledAt, changeLog } = req.body;
 
     const post = await ScheduledPost.findOne({ _id: postId, organizationId: req.user.organizationId });
     if (!post) {
@@ -195,19 +246,43 @@ const updateScheduledPost = asyncHandler(async (req, res) => {
 
     // Update post fields
     if (caption !== undefined) post.caption = caption;
-    if (mediaId !== undefined) {
-        let media = null;
-        if (mediaId) {
-            media = await Media.findById(mediaId);
-            if (!media) throw new ApiError(404, "Media not found");
+    if (inputMediaIds !== undefined || mediaId !== undefined) {
+        let finalMediaIds = inputMediaIds !== undefined ? inputMediaIds : (mediaId ? [mediaId] : []);
+        let mediaItems = [];
 
-            const compatibility = validateMediaCompatibility(media, post.platform);
-            if (compatibility.errors.length > 0) {
-                throw new ApiError(400, compatibility.errors[0], compatibility.errors);
+        if (finalMediaIds.length > 0) {
+            mediaItems = await Media.find({ _id: { $in: finalMediaIds } });
+            if (mediaItems.length !== finalMediaIds.length) {
+                throw new ApiError(404, "One or more Media items not found");
             }
-            req.mediaWarnings = compatibility.warnings;
+
+            if (post.platform.toLowerCase() === "youtube" && mediaItems.length > 1) {
+                throw new ApiError(400, "YouTube requires exactly one video media item.");
+            }
+
+            const hasVideo = mediaItems.some(m => m.type === "video");
+            const hasImage = mediaItems.some(m => m.type === "image");
+            if (hasVideo && hasImage) {
+                throw new ApiError(400, "Mixed media (combining images and videos) is not supported.");
+            }
+            if (post.platform.toLowerCase() === "youtube" && !hasVideo) {
+                throw new ApiError(400, "YouTube requires a video for posting.");
+            }
+
+            const warningsAcc = [];
+            for (const media of mediaItems) {
+                const compatibility = validateMediaCompatibility(media, post.platform);
+                if (compatibility.errors.length > 0) {
+                    throw new ApiError(400, compatibility.errors[0], compatibility.errors);
+                }
+                warningsAcc.push(...compatibility.warnings);
+            }
+            req.mediaWarnings = warningsAcc;
         }
-        post.mediaId = mediaId || null;
+
+        post.mediaId = finalMediaIds[0] || null;
+        post.mediaIds = finalMediaIds;
+
         // Re-evaluate rules on update
         const ruleResults = await evaluateRules(
             req.user.organizationId,
@@ -216,7 +291,7 @@ const updateScheduledPost = asyncHandler(async (req, res) => {
                 caption: caption !== undefined ? caption : post.caption,
                 platform: post.platform,
                 scheduledAt: scheduledAt !== undefined ? scheduledAt : post.scheduledAt,
-                media
+                media: post.mediaIds.length > 0 ? { _id: post.mediaIds[0] } : null // legacy bypass compat
             }
         );
 
@@ -237,12 +312,22 @@ const updateScheduledPost = asyncHandler(async (req, res) => {
     // Create new version
     await createVersion(post, req.user._id, changeLog || "Post updated");
 
+    // Resolve group for auditing context
+    const associatedGroup = await AccountGroup.findOne({ 
+        organizationId: req.user.organizationId, 
+        accounts: post.socialAccountId 
+    }).select("_id");
+
     eventBus.emit(EVENTS.POST_UPDATED, {
         postId: post._id,
         userId: req.user._id,
         organizationId: req.user.organizationId,
+        socialAccountId: post.socialAccountId,
+        groupId: associatedGroup?._id,
         platform: post.platform,
         scheduledAt: post.scheduledAt,
+        ipAddress: req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress,
+        userAgent: req.headers["user-agent"],
     });
 
     const finalWarnings = [
@@ -267,6 +352,7 @@ const getPostVersions = asyncHandler(async (req, res) => {
     const versions = await PostVersion.find({ postId })
         .populate("createdBy", "name email")
         .populate("mediaId")
+        .populate("mediaIds")
         .sort({ versionNumber: -1 });
 
     return res
@@ -294,6 +380,7 @@ const rollbackPostVersion = asyncHandler(async (req, res) => {
     // Restore content
     post.caption = version.caption;
     post.mediaId = version.mediaId;
+    post.mediaIds = version.mediaIds && version.mediaIds.length > 0 ? version.mediaIds : (version.mediaId ? [version.mediaId] : []);
     // We might want to keep the current scheduled time or rollback it too.
     // Given the requirement "Rollback to previous version", we rollback everything.
     post.scheduledAt = version.scheduledAt;
@@ -317,39 +404,60 @@ const rollbackPostVersion = asyncHandler(async (req, res) => {
 });
 
 const getScheduledPosts = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 20, status } = req.query;
-    const query = { organizationId: req.user.organizationId };
+    const {
+        page = 1,
+        limit = 20,
+        status,
+        postType,
+        socialAccountId,
+        groupId,
+        platform,
+        search,
+        startDate,
+        endDate
+    } = req.query;
 
-    if (status) {
-        query.status = status;
-    }
-
-    const posts = await ScheduledPost.find(query)
-        .populate("mediaId")
-        .populate("socialAccountId", "platform platformUserName")
-        .sort({ scheduledAt: 1 })
-        .skip((page - 1) * limit)
-        .limit(parseInt(limit));
-
-    const total = await ScheduledPost.countDocuments(query);
+    // Delegate all business logic and query construction to the service layer
+    const result = await getFilteredPosts({
+        organizationId: req.user.organizationId,
+        socialAccountId,
+        groupId,
+        platform,
+        search,
+        status,
+        postType,
+        startDate,
+        endDate,
+        page,
+        limit
+    });
 
     return res
         .status(200)
         .json(
             new ApiResponse(
                 200,
-                {
-                    posts,
-                    pagination: {
-                        page: parseInt(page),
-                        limit: parseInt(limit),
-                        total,
-                        pages: Math.ceil(total / limit),
-                    },
-                },
-                "Scheduled posts fetched successfully"
+                result,
+                "Posts fetched successfully"
             )
         );
+});
+
+const getScheduledPostById = asyncHandler(async (req, res) => {
+    const { postId } = req.params;
+
+    const post = await ScheduledPost.findOne({
+        _id: postId,
+        organizationId: req.user.organizationId,
+    }).populate("mediaId").populate("mediaIds").populate("socialAccountId", "platform platformUserName channelTitle avatar thumbnail picture displayName metadata statistics");
+
+    if (!post) {
+        throw new ApiError(404, "Post not found");
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, post, "Post fetched successfully"));
 });
 
 const deleteScheduledPost = asyncHandler(async (req, res) => {
@@ -378,10 +486,48 @@ const deleteScheduledPost = asyncHandler(async (req, res) => {
 
 const getDashboardStats = asyncHandler(async (req, res) => {
     const organizationId = req.user.organizationId;
+    const { groupId } = req.query;
 
-    // 1. Get counts by status
+    const matchId = (id) => (typeof id === "string" && mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id);
+    const matchQuery = { organizationId: matchId(organizationId) };
+
+    // Resolve groupId to account filter if applicable
+    if (groupId && groupId !== "all" && mongoose.Types.ObjectId.isValid(groupId)) {
+        try {
+            const { AccountGroup } = await import("../models/accountGroup.model.js");
+            const group = await AccountGroup.findOne({ 
+                _id: matchId(groupId), 
+                organizationId: matchQuery.organizationId 
+            });
+
+            if (group && group.accounts && group.accounts.length > 0) {
+                // Ensure we use IDs even if populated, and convert to ObjectIds for the aggregation
+                matchQuery.socialAccountId = { 
+                    $in: group.accounts.map(acc => matchId(typeof acc === "object" && acc._id ? acc._id : acc)) 
+                };
+                logger.info(`Filtering dashboard for group: ${group.name} (${group.accounts.length} accounts)`);
+            } else if (group) {
+                // Group with no accounts returns empty stats immediately for performance
+                return res.status(200).json(
+                    new ApiResponse(
+                        200, 
+                        { 
+                            stats: { total: 0, pending: 0, posted: 0, failed: 0 }, 
+                            chartData: [], 
+                            platformDistribution: [] 
+                        }, 
+                        "Group has no accounts."
+                    )
+                );
+            }
+        } catch (err) {
+            logger.error(`Error applying group filter to dashboard: ${err.message}`);
+        }
+    }
+
+    // 1. Get counts by status using the dynamic matchQuery
     const statusCounts = await ScheduledPost.aggregate([
-        { $match: { organizationId: organizationId } },
+        { $match: matchQuery },
         {
             $group: {
                 _id: "$status",
@@ -399,9 +545,23 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     };
 
     statusCounts.forEach((item) => {
-        if (item._id === "pending") stats.pending = item.count;
-        if (item._id === "posted") stats.posted = item.count;
-        if (item._id === "failed") stats.failed = item.count;
+        const status = item._id;
+        
+        // Production-level status mapping: 
+        // include all states that represent upcoming or currently being processed content
+        if (["scheduled", "pending_approval", "approved", "processing"].includes(status)) {
+            stats.pending += item.count;
+        }
+        
+        // Count both successfully sent statuses
+        if (status === "posted" || status === "published") {
+            stats.posted += item.count;
+        }
+        
+        if (status === "failed") {
+            stats.failed += item.count;
+        }
+        
         stats.total += item.count;
     });
 
@@ -413,22 +573,24 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     const dailyActivity = await ScheduledPost.aggregate([
         {
             $match: {
-                organizationId: organizationId,
+                ...matchQuery,
                 scheduledAt: { $gte: sevenDaysAgo },
             },
         },
         {
             $group: {
                 _id: {
-                    $dateToString: { format: "%Y-%m-%d", date: "$scheduledAt" },
+                    date: { $dateToString: { format: "%Y-%m-%d", date: "$scheduledAt" } },
+                    platform: "$platform"
                 },
                 count: { $sum: 1 },
             },
         },
-        { $sort: { _id: 1 } },
+        { $sort: { "_id.date": 1 } },
     ]);
 
-    // Fill in missing days
+    // Fill in missing days and platforms
+    const platforms = ["instagram", "facebook", "linkedin", "x", "youtube"];
     const chartData = [];
     for (let i = 6; i >= 0; i--) {
         const d = new Date();
@@ -436,13 +598,34 @@ const getDashboardStats = asyncHandler(async (req, res) => {
         const dateString = d.toISOString().split("T")[0];
         const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
 
-        const found = dailyActivity.find((item) => item._id === dateString);
-        chartData.push({
+        const dayStats = {
             name: dayName,
             date: dateString,
-            total: found ? found.count : 0,
+            total: 0
+        };
+
+        // Add counts for each platform
+        platforms.forEach(platform => {
+            const found = dailyActivity.find(item => item._id.date === dateString && item._id.platform === platform);
+            const count = found ? found.count : 0;
+            dayStats[platform] = count;
+            dayStats.total += count;
         });
+
+        chartData.push(dayStats);
     }
+
+    // 3. Platform Distribution
+    const platformDistribution = await ScheduledPost.aggregate([
+        { $match: matchQuery },
+        {
+            $group: {
+                _id: "$platform",
+                count: { $sum: 1 },
+            },
+        },
+        { $project: { name: "$_id", value: "$count", _id: 0 } }
+    ]);
 
     return res.status(200).json(
         new ApiResponse(
@@ -450,6 +633,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
             {
                 stats,
                 chartData,
+                platformDistribution
             },
             "Dashboard stats fetched successfully"
         )
@@ -458,10 +642,41 @@ const getDashboardStats = asyncHandler(async (req, res) => {
 
 const getAnalytics = asyncHandler(async (req, res) => {
     const organizationId = req.user.organizationId;
+    const { days: daysQuery, groupId } = req.query;
+    const days = parseInt(daysQuery) || 30;
+
+    console.log(`[DEBUG] Analytics Request - Org: ${organizationId}, Group: ${groupId}, Days: ${days}`);
+
+    // Build the query match object
+    const matchId = (id) => (typeof id === "string" && mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id);
+    const matchQuery = { organizationId: matchId(organizationId) };
+
+    // If groupId is provided, narrow down the accounts we are analyzing
+    if (groupId && groupId !== "all" && mongoose.Types.ObjectId.isValid(groupId)) {
+        try {
+            const { AccountGroup } = await import("../models/accountGroup.model.js");
+            const group = await AccountGroup.findOne({ 
+                _id: matchId(groupId), 
+                organizationId: matchQuery.organizationId 
+            });
+
+            if (group && group.accounts && group.accounts.length > 0) {
+                // Explicitly cast all accounts to ObjectIds for the aggregation pipeline
+                matchQuery.socialAccountId = { $in: group.accounts.map(id => matchId(id)) };
+                logger.info(`Analyzing group: ${group.name} (${group.accounts.length} accounts)`);
+            } else if (group) {
+                return res.status(200).json(
+                    new ApiResponse(200, { platformDistribution: [], statusDistribution: [], volumeData: [] }, "Group has no accounts.")
+                );
+            }
+        } catch (err) {
+            logger.error(`Error processing analytics group filter: ${err.message}`);
+        }
+    }
 
     // 1. Platform Distribution (Pie Chart)
     const platformDistribution = await ScheduledPost.aggregate([
-        { $match: { organizationId: organizationId } },
+        { $match: matchQuery },
         {
             $group: {
                 _id: "$platform",
@@ -473,52 +688,81 @@ const getAnalytics = asyncHandler(async (req, res) => {
 
     // 2. Status Breakdown (Pie/Donut)
     const statusDistribution = await ScheduledPost.aggregate([
-        { $match: { organizationId: organizationId } },
+        { $match: matchQuery },
         {
             $group: {
-                _id: "$status",
+                _id: {
+                    platform: "$platform",
+                    status: "$status"
+                },
                 count: { $sum: 1 },
             },
         },
-        { $project: { name: "$_id", value: "$count", _id: 0 } }
+        {
+            $project: {
+                platform: "$_id.platform",
+                status: "$_id.status",
+                value: "$count",
+                _id: 0
+            }
+        }
     ]);
 
-    // 3. Weekly Volume Comparison (This Week vs Last Week) - Simplified for now to just daily volume
-    // Reuse existing chartData logic or extend it. Let's get 30 days for analytics.
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    thirtyDaysAgo.setHours(0, 0, 0, 0);
+    // 3. Weekly Volume Comparison
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - (days - 1));
+    startDate.setHours(0, 0, 0, 0);
+
+    const volumeMatch = { 
+        ...matchQuery, 
+        scheduledAt: { $gte: startDate } 
+    };
 
     const dailyVolume = await ScheduledPost.aggregate([
-        {
-            $match: {
-                organizationId: organizationId,
-                scheduledAt: { $gte: thirtyDaysAgo },
-            },
-        },
+        { $match: volumeMatch },
         {
             $group: {
-                _id: { $dateToString: { format: "%Y-%m-%d", date: "$scheduledAt" } },
+                _id: {
+                    date: { $dateToString: { format: "%Y-%m-%d", date: "$scheduledAt" } },
+                    platform: "$platform"
+                },
                 count: { $sum: 1 },
             },
         },
-        { $sort: { _id: 1 } },
+        { $sort: { "_id.date": 1 } },
     ]);
 
-    // Fill missing days
+    // Fill missing days and platforms
+    const platforms = ["instagram", "facebook", "linkedin", "x", "youtube"];
     const volumeData = [];
-    for (let i = 29; i >= 0; i--) {
-        const d = new Date();
+
+    // Use the start of today as the reference point
+    const baseDate = new Date();
+    baseDate.setHours(0, 0, 0, 0);
+
+    for (let i = (days - 1); i >= 0; i--) {
+        const d = new Date(baseDate);
         d.setDate(d.getDate() - i);
+
+        // MongoDB $dateToString in UTC format: YYYY-MM-DD
         const dateString = d.toISOString().split("T")[0];
         const dayOfMonth = d.getDate();
 
-        const found = dailyVolume.find(item => item._id === dateString);
-        volumeData.push({
+        const dayStats = {
             date: dateString,
             day: dayOfMonth,
-            posts: found ? found.count : 0
+            posts: 0
+        };
+
+        // Add counts for each platform
+        platforms.forEach(platform => {
+            const found = dailyVolume.find(item => item._id.date === dateString && item._id.platform === platform);
+            const count = found ? found.count : 0;
+            dayStats[platform] = count;
+            dayStats.posts += count;
         });
+
+        volumeData.push(dayStats);
     }
 
     return res.status(200).json(
@@ -685,6 +929,17 @@ const updatePostStatus = asyncHandler(async (req, res) => {
     );
 });
 
+const getAccountStats = asyncHandler(async (req, res) => {
+    const { accountId } = req.params;
+    const organizationId = req.user.organizationId;
+
+    const stats = await getPostStatsSummary(organizationId, accountId);
+
+    return res.status(200).json(
+        new ApiResponse(200, stats, "Account stats fetched successfully")
+    );
+});
+
 export {
     createScheduledPost,
     updateScheduledPost,
@@ -696,5 +951,7 @@ export {
     getAnalytics,
     getSmartSuggestions,
     bulkCreateScheduledPosts,
-    updatePostStatus
+    updatePostStatus,
+    getAccountStats,
+    getScheduledPostById,
 };

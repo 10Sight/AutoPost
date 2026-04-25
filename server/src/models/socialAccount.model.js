@@ -48,19 +48,50 @@ const socialAccountSchema = new Schema(
         scopes: [{
             type: String,
         }],
+        thumbnail: {
+            type: String,
+        },
+        avatar: {
+            type: String,
+        },
+        picture: {
+            type: String,
+        },
         metadata: {
             type: Schema.Types.Mixed, // Store any other platform-specific data
         },
     },
     {
         timestamps: true,
-        toJSON: { getters: true },
-        toObject: { getters: true }
+        toJSON: { getters: true, virtuals: true },
+        toObject: { getters: true, virtuals: true }
     }
 );
 
-// Ensure a tenant can only link one account per platform per organization (shared pool)
-socialAccountSchema.index({ organizationId: 1, platform: 1 }, { unique: true });
+// Virtual for a consistent display name across all platforms
+socialAccountSchema.virtual("displayName").get(function () {
+    if (this.platform === "youtube") {
+        return this.channelTitle || this.platformUserName || "YouTube Channel";
+    }
+    return this.platformUserName || "Unknown Account";
+});
+
+// Virtual for a consistent avatar URL across all platforms
+socialAccountSchema.virtual("avatarUrl").get(function () {
+    return this.picture || 
+           this.avatar || 
+           this.thumbnail || 
+           this.metadata?.thumbnail || 
+           this.metadata?.picture || 
+           this.metadata?.picture?.data?.url ||
+           this.metadata?.profile_picture_url ||
+           this.metadata?.profile_image_url ||
+           this.metadata?.thumbnails?.default?.url ||
+           null;
+});
+
+// Ensure a tenant can link multiple accounts per platform if the User IDs are different (e.g., Profile + Page)
+socialAccountSchema.index({ organizationId: 1, platform: 1, platformUserId: 1 }, { unique: true });
 
 export const SocialAccount = model(
     "SocialAccount",

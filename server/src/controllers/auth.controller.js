@@ -4,6 +4,8 @@ import { User } from "../models/user.model.js";
 import { Organization } from "../models/organization.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { config } from "../config/env.config.js";
+import { InvitationService } from "../services/invitation.service.js";
+import { updateUsage } from "../services/usage.service.js";
 import jwt from "jsonwebtoken";
 
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -25,7 +27,7 @@ const generateAccessAndRefreshTokens = async (userId) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-    const { name, email, password } = req.body;
+    const { name, email, password, invitationToken } = req.body;
 
     if ([name, email, password].some((field) => field?.trim() === "")) {
         throw new ApiError(400, "All fields are required");
@@ -37,18 +39,36 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(409, "User with email already exists");
     }
 
-    // Create a new Organization for the registrant
-    const organization = await Organization.create({
-        name: `${name}'s Organization`,
-        slug: name.toLowerCase().replace(/ /g, "-") + "-" + Date.now().toString().slice(-4),
-    });
+    let organizationId;
+    let role = "admin";
+    let invitation = null;
+
+    if (invitationToken) {
+        // Strategy 1: Join existing organization via invitation
+        invitation = await InvitationService.verifyToken(invitationToken);
+
+        // Security Check: Email must match the invitation
+        if (invitation.email.toLowerCase() !== email.toLowerCase()) {
+            throw new ApiError(403, "This invitation was issued for a different email address");
+        }
+
+        organizationId = invitation.organizationId._id;
+        role = invitation.role;
+    } else {
+        // Strategy 2: Create a new Organization for the registrant
+        const organization = await Organization.create({
+            name: `${name}'s Organization`,
+            slug: name.toLowerCase().replace(/ /g, "-") + "-" + Date.now().toString().slice(-4),
+        });
+        organizationId = organization._id;
+    }
 
     const user = await User.create({
         name,
         email,
         password,
-        organizationId: organization._id,
-        role: "admin", // Registrant becomes the admin of their org
+        organizationId,
+        role,
     });
 
     const createdUser = await User.findById(user._id).select(
@@ -57,6 +77,15 @@ const registerUser = asyncHandler(async (req, res) => {
 
     if (!createdUser) {
         throw new ApiError(500, "Something went wrong while registering the user");
+    }
+
+    // Post-Registration Logic
+    if (invitation) {
+        // 1. Mark invitation as accepted via Service
+        await InvitationService.acceptInvitation(invitationToken);
+
+        // 2. Increment team member count for the organization
+        await updateUsage(organizationId, 'team', 1, 'inc');
     }
 
     return res
@@ -95,7 +124,8 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const options = {
         httpOnly: true,
-        secure: true,
+        secure: config.NODE_ENV === "production",
+        sameSite: config.NODE_ENV === "production" ? "none" : "lax"
     };
 
     return res
@@ -130,7 +160,8 @@ const logoutUser = asyncHandler(async (req, res) => {
 
     const options = {
         httpOnly: true,
-        secure: true,
+        secure: config.NODE_ENV === "production",
+        sameSite: config.NODE_ENV === "production" ? "none" : "lax"
     };
 
     return res
@@ -169,7 +200,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
         const options = {
             httpOnly: true,
-            secure: true,
+            secure: config.NODE_ENV === "production",
+            sameSite: config.NODE_ENV === "production" ? "none" : "lax"
         };
 
         return res

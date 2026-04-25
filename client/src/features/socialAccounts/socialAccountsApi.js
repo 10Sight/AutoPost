@@ -17,8 +17,8 @@ export const socialAccountApiSlice = apiSlice.injectEndpoints({
             invalidatesTags: ["SocialAccount"],
         }),
         disconnectAccount: builder.mutation({
-            query: (platform) => ({
-                url: `/social-accounts/${platform}`,
+            query: (id) => ({
+                url: `/social-accounts/${id}`,
                 method: "DELETE",
             }),
             invalidatesTags: ["SocialAccount"],
@@ -26,6 +26,21 @@ export const socialAccountApiSlice = apiSlice.injectEndpoints({
         getYouTubeAuthUrl: builder.query({
             query: () => ({
                 url: "/youtube/auth",
+            }),
+        }),
+        getLinkedInAuthUrl: builder.query({
+            query: () => ({
+                url: "/linkedin/auth",
+            }),
+        }),
+        getXAuthUrl: builder.query({
+            query: () => ({
+                url: "/x/auth",
+            }),
+        }),
+        getFacebookAuthUrl: builder.query({
+            query: () => ({
+                url: "/facebook/auth",
             }),
         }),
         saveYouTubeAccount: builder.mutation({
@@ -62,7 +77,7 @@ export const socialAccountApiSlice = apiSlice.injectEndpoints({
                 method: "POST",
                 data: postData,
             }),
-            invalidatesTags: ["ScheduledPost"],
+            invalidatesTags: ["ScheduledPost", "YouTubeAnalytics"],
         }),
         getYouTubeQuotaMetrics: builder.query({
             query: () => ({
@@ -76,6 +91,7 @@ export const socialAccountApiSlice = apiSlice.injectEndpoints({
                 url: "/youtube/analytics",
                 method: "GET",
             }),
+            providesTags: ["YouTubeAnalytics"],
         }),
     }),
 });
@@ -86,6 +102,9 @@ export const {
     useDisconnectAccountMutation,
     useGetYouTubeAuthUrlQuery,
     useLazyGetYouTubeAuthUrlQuery,
+    useLazyGetLinkedInAuthUrlQuery,
+    useLazyGetXAuthUrlQuery,
+    useLazyGetFacebookAuthUrlQuery,
     useSaveYouTubeAccountMutation,
     useGetYouTubeChannelQuery,
     useDisconnectYouTubeMutation,

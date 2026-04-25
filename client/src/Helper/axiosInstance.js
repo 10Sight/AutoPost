@@ -19,9 +19,9 @@ axiosInstance.interceptors.response.use(
             originalRequest._retry = true;
 
             try {
-                // Attempt to refresh token
+                // Attempt to refresh token - using relative URL or ensuring it uses the correct base
                 await axios.post(
-                    `${import.meta.env.VITE_API_URL || "https://autopost-server-8yze.onrender.com"}/auth/refresh-token`,
+                    `${import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"}/auth/refresh-token`,
                     {},
                     { withCredentials: true }
                 );

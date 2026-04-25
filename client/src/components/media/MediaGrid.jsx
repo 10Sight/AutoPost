@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Trash2, FileVideo, ImageIcon, Maximize2, X, MoreHorizontal, Link as LinkIcon, Download } from "lucide-react";
+import { Trash2, FileVideo, ImageIcon, Maximize2, X, MoreHorizontal, Link as LinkIcon, Download, Crop as CropIcon, FolderInput, Wand2 } from "lucide-react";
 import { format } from "date-fns";
 import {
     Dialog,
@@ -7,6 +7,7 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
+    DialogDescription,
 } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
@@ -17,9 +18,31 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import { cn } from "../../lib/utils";
 import { toast } from "sonner";
 
-const MediaGrid = ({ media, onDelete, onSelect, selectedMedia }) => {
+const optimizeCloudinaryUrl = (url, type) => {
+    if (!url || !url.includes("cloudinary.com")) return url;
+    if (type === "video") return url; // Don't transform video source directly in <img> tag
+
+    // Inject transformation parameters: w_400 (width 400), c_fill (crop fill), q_auto (auto quality), f_auto (auto format)
+    // Cloudinary URLs usually have /upload/s--xxxx--/v12345/ or just /upload/v12345/
+    const parts = url.split("/upload/");
+    if (parts.length !== 2) return url;
+
+    return `${parts[0]}/upload/w_600,c_fill,q_auto,f_auto/${parts[1]}`;
+};
+
+const MediaGrid = ({ 
+    media, 
+    onDelete, 
+    onSelect, 
+    onMove, 
+    onCrop, 
+    onEdit,
+    selectedMediaIds = [],
+    gridClassName // Allow overriding the grid layout for different contexts
+}) => {
     const [previewItem, setPreviewItem] = useState(null);
 
     const handleCopyLink = (url) => {
@@ -43,24 +66,28 @@ const MediaGrid = ({ media, onDelete, onSelect, selectedMedia }) => {
 
     return (
         <>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
+            <div className={cn(
+                "grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6",
+                gridClassName
+            )}>
                 {media.map((item) => (
                     <Card
                         key={item._id}
                         className={`group relative overflow-hidden transition-all duration-300 hover:shadow-lg border-gray-200 dark:border-gray-800 cursor-pointer
-                            ${selectedMedia?._id === item._id ? "ring-2 ring-primary border-primary" : ""}
+                            ${selectedMediaIds.some(m => m._id === item._id) ? "ring-2 ring-primary border-primary bg-primary/5" : ""}
                         `}
                         onClick={() => onSelect ? onSelect(item) : setPreviewItem(item)}
                     >
                         <AspectRatio ratio={1 / 1} className="bg-gray-100 dark:bg-gray-900">
                             {item.type === "video" ? (
-                                <div className="flex h-full w-full items-center justify-center group-hover:bg-gray-200 dark:group-hover:bg-gray-800 transition-colors">
-                                    <FileVideo className="h-10 w-10 text-gray-400 group-hover:text-primary transition-colors" />
+                                <div className="flex h-full w-full items-center justify-center group-hover:bg-gray-200 dark:group-hover:bg-gray-800 transition-colors text-gray-400 hover:text-primary">
+                                    <FileVideo className="h-16 w-16 transition-all duration-300 group-hover:scale-110" />
                                 </div>
                             ) : (
                                 <img
-                                    src={item.url}
+                                    src={optimizeCloudinaryUrl(item.url, item.type)}
                                     alt={item.originalName}
+                                    loading="lazy"
                                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                                 />
                             )}
@@ -84,45 +111,73 @@ const MediaGrid = ({ media, onDelete, onSelect, selectedMedia }) => {
                                 <Button
                                     variant="secondary"
                                     size="icon"
-                                    className="h-9 w-9 rounded-full bg-white/90 hover:bg-white text-gray-900 shadow-sm transition-transform hover:scale-105"
+                                    className="h-9 w-9 rounded-full bg-white/90 hover:bg-white text-gray-900 shadow-sm transition-transform hover:scale-105 z-10"
                                     onClick={(e) => {
+                                        e.preventDefault();
                                         e.stopPropagation();
                                         setPreviewItem(item);
                                     }}
+                                    onPointerDown={(e) => e.stopPropagation()}
                                 >
-                                    <Maximize2 className="h-4 w-4" />
+                                    <Maximize2 className="h-4 w-4 pointer-events-none" />
                                 </Button>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button
-                                            variant="secondary"
-                                            size="icon"
-                                            className="h-9 w-9 rounded-full bg-white/90 hover:bg-white text-gray-900 shadow-sm transition-transform hover:scale-105"
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="center">
-                                        <DropdownMenuItem onClick={() => handleCopyLink(item.url)}>
-                                            <LinkIcon className="mr-2 h-4 w-4" />
-                                            Copy Link
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => window.open(item.url, '_blank')}>
-                                            <Download className="mr-2 h-4 w-4" />
-                                            Download
-                                        </DropdownMenuItem>
-                                        {onDelete && (
-                                            <DropdownMenuItem
-                                                onClick={() => onDelete(item._id)}
-                                                className="text-red-600 focus:text-red-600"
+                                <div
+                                    className="z-10"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                    }}
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                >
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="secondary"
+                                                size="icon"
+                                                className="h-9 w-9 rounded-full bg-white/90 hover:bg-white text-gray-900 shadow-sm transition-transform hover:scale-105"
                                             >
-                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                Delete
+                                                <MoreHorizontal className="h-4 w-4 pointer-events-none" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="center">
+                                            <DropdownMenuItem onClick={() => handleCopyLink(item.url)}>
+                                                <LinkIcon className="mr-2 h-4 w-4" />
+                                                Copy Link
                                             </DropdownMenuItem>
-                                        )}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                            <DropdownMenuItem onClick={() => window.open(item.url, '_blank')}>
+                                                <Download className="mr-2 h-4 w-4" />
+                                                Download
+                                            </DropdownMenuItem>
+                                            {onMove && (
+                                                <DropdownMenuItem onClick={() => onMove(item)}>
+                                                    <FolderInput className="mr-2 h-4 w-4" />
+                                                    Move to Folder
+                                                </DropdownMenuItem>
+                                            )}
+                                            {onEdit && (
+                                                <DropdownMenuItem onClick={() => onEdit(item)}>
+                                                    <Wand2 className="mr-2 h-4 w-4" />
+                                                    Professional Edit
+                                                </DropdownMenuItem>
+                                            )}
+                                            {onCrop && !item.type.includes("video") && (
+                                                <DropdownMenuItem onClick={() => onCrop(item)}>
+                                                    <CropIcon className="mr-2 h-4 w-4" />
+                                                    Crop Image
+                                                </DropdownMenuItem>
+                                            )}
+                                            {onDelete && (
+                                                <DropdownMenuItem
+                                                    onClick={() => onDelete(item._id)}
+                                                    className="text-red-600 focus:text-red-600"
+                                                >
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            )}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
                             </div>
                         )}
 
@@ -141,7 +196,9 @@ const MediaGrid = ({ media, onDelete, onSelect, selectedMedia }) => {
 
             {/* Preview Dialog */}
             <Dialog open={!!previewItem} onOpenChange={(open) => !open && setPreviewItem(null)}>
-                <DialogContent className="max-w-4xl w-full p-0 overflow-hidden bg-transparent border-none shadow-2xl">
+                <DialogContent className="max-w-4xl w-full p-0 overflow-hidden bg-transparent border-none shadow-2xl [&>button]:hidden">
+                    <DialogTitle className="sr-only">{previewItem?.originalName || "Media Preview"}</DialogTitle>
+                    <DialogDescription className="sr-only">Preview of the selected media asset.</DialogDescription>
                     <div className="relative group/modal">
                         {previewItem?.type === "video" ? (
                             <video
@@ -159,8 +216,11 @@ const MediaGrid = ({ media, onDelete, onSelect, selectedMedia }) => {
                         <Button
                             variant="secondary"
                             size="icon"
-                            className="absolute top-4 right-4 h-10 w-10 rounded-full opacity-0 group-hover/modal:opacity-100 transition-opacity"
-                            onClick={() => setPreviewItem(null)}
+                            className="absolute top-4 right-4 h-10 w-10 rounded-full opacity-0 group-hover/modal:opacity-100 transition-opacity bg-white/10 hover:bg-white/20 text-white border-white/20 border z-50 backdrop-blur-md"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewItem(null);
+                            }}
                         >
                             <X className="h-5 w-5" />
                         </Button>
@@ -183,6 +243,18 @@ const MediaGrid = ({ media, onDelete, onSelect, selectedMedia }) => {
                                 <Button size="sm" variant="outline" className="h-8 gap-2 bg-white/10 border-white/20 hover:bg-white/20 text-white" onClick={() => handleCopyLink(previewItem?.url)}>
                                     <LinkIcon className="h-3 w-3" /> Copy Link
                                 </Button>
+                                {onEdit && (
+                                    <Button 
+                                        size="sm" 
+                                        className="h-8 gap-2 bg-primary hover:bg-primary/90 text-white border-none" 
+                                        onClick={() => {
+                                            onEdit(previewItem);
+                                            setPreviewItem(null);
+                                        }}
+                                    >
+                                        <Wand2 className="h-3.5 w-3.5" /> Professional Edit
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </div>

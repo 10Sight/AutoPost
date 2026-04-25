@@ -11,6 +11,9 @@ import {
 } from "lucide-react";
 import { useLogoutMutation } from "../../features/auth/authApi";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { selectCurrentUser } from "../../features/auth/authSlice";
+import { ShieldCheck, Crown } from "lucide-react";
 
 const navigation = [
     { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
@@ -23,6 +26,7 @@ const navigation = [
 const Sidebar = ({ isOpen, setIsOpen }) => {
     const location = useLocation();
     const navigate = useNavigate();
+    const user = useSelector(selectCurrentUser);
     const [logout] = useLogoutMutation();
 
     const handleLogout = async () => {
@@ -78,6 +82,18 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                             {item.name}
                         </Link>
                     ))}
+
+                    {user?.role === "superadmin" && (
+                        <div className="pt-4 mt-4 border-t border-gray-800">
+                            <Link
+                                to="/admin-panel"
+                                className="group flex items-center px-2 py-2 text-base font-bold rounded-md text-primary hover:bg-primary/10 transition-all border border-primary/20 bg-primary/5 mb-2"
+                            >
+                                <Crown className="mr-4 h-6 w-6 text-primary animate-pulse" />
+                                Command Center
+                            </Link>
+                        </div>
+                    )}
                 </nav>
 
                 <div className="absolute bottom-0 w-full bg-gray-800 p-4">

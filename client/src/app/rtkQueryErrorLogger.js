@@ -9,6 +9,11 @@ export const rtkQueryErrorLogger = (api) => (next) => (action) => {
 
     // Handle Errors
     if (isRejectedWithValue(action)) {
+        // Skip logging for our custom "undefined" URL safety net
+        if (action.payload?.status === "CUSTOM_ERROR") {
+            return next(action);
+        }
+
         console.warn("We got a rejected action!", action);
 
         const status = action.payload?.status;

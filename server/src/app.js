@@ -7,6 +7,8 @@ import rateLimit from "express-rate-limit";
 
 import { config } from "./config/env.config.js";
 
+import { razorpayWebhook, stripeWebhook } from "./controllers/billing.controller.js";
+
 const app = express();
 
 // Rate Limiting
@@ -50,7 +52,19 @@ app.use(
     })
 );
 
-app.use(helmet());
+// Razorpay Webhook
+app.post("/api/v1/razorpay/webhook", express.json(), razorpayWebhook);
+
+// Stripe Webhook (Raw body required for signature verification)
+app.post("/api/v1/stripe/webhook", express.raw({ type: "application/json" }), stripeWebhook);
+
+app.use(
+    helmet({
+        crossOriginOpenerPolicy: { policy: "same-origin" },
+        crossOriginEmbedderPolicy: { policy: "require-corp" },
+        crossOriginResourcePolicy: { policy: "cross-origin" },
+    })
+);
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
@@ -59,6 +73,7 @@ app.use(morgan("dev"));
 
 // Routes import
 import authRouter from "./routes/auth.routes.js";
+import billingRoutes from "./routes/billing.routes.js";
 import userRouter from "./routes/user.routes.js"; // Keep userRouter as it's used in declaration
 import scheduledPostRouter from "./routes/scheduledPost.routes.js";
 import socialAccountRouter from "./routes/socialAccount.routes.js";
@@ -69,6 +84,14 @@ import organizationRouter from "./routes/organization.routes.js";
 import ruleRouter from "./routes/rule.routes.js";
 import notificationRouter from "./routes/notification.routes.js";
 import youtubeRouter from "./routes/youtube.routes.js";
+import linkedinRouter from "./routes/linkedin.routes.js";
+import xRouter from "./routes/x.routes.js";
+import facebookRouter from "./routes/facebook.routes.js";
+import accountGroupRouter from "./routes/accountGroup.routes.js";
+
+import superadminRouter from "./routes/superadmin.routes.js";
+import engagementRouter from "./routes/engagement.routes.js";
+import invitationRouter from "./routes/invitation.routes.js";
 
 // Routes declaration
 app.use("/api/v1/auth", authLimiter, authRouter);
@@ -77,16 +100,24 @@ app.use("/api/v1/auth", authLimiter, authRouter);
 import { verifyJWT } from "./middlewares/auth.middleware.js"; // Importing to use here
 import { tenantMiddleware } from "./middlewares/tenant.middleware.js";
 
+app.use("/api/v1/superadmin", superadminRouter);
 app.use("/api/v1/users", verifyJWT, userRouter);
 app.use("/api/v1/scheduled-posts", verifyJWT, tenantMiddleware, scheduledPostRouter);
 app.use("/api/v1/social-accounts", verifyJWT, tenantMiddleware, socialAccountRouter);
 app.use("/api/v1/youtube", youtubeRouter);
+app.use("/api/v1/linkedin", linkedinRouter);
+app.use("/api/v1/billing", billingRoutes);
+app.use("/api/v1/x", xRouter);
+app.use("/api/v1/facebook", facebookRouter);
 app.use("/api/v1/media", verifyJWT, tenantMiddleware, mediaRouter);
 app.use("/api/v1/audit-logs", verifyJWT, tenantMiddleware, auditLogRouter);
 app.use("/api/v1/usage", verifyJWT, tenantMiddleware, usageRouter);
-app.use("/api/v1/organization", verifyJWT, tenantMiddleware, organizationRouter);
+app.use("/api/v1/organization", organizationRouter);
 app.use("/api/v1/rules", verifyJWT, tenantMiddleware, ruleRouter);
 app.use("/api/v1/notifications", verifyJWT, tenantMiddleware, notificationRouter);
+app.use("/api/v1/account-groups", verifyJWT, tenantMiddleware, accountGroupRouter);
+app.use("/api/v1/engagement", engagementRouter);
+app.use("/api/v1/invitations", invitationRouter);
 
 // Error handling middleware
 import { ApiError } from "./utils/ApiError.js";

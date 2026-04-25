@@ -73,7 +73,7 @@ const BulkUpload = () => {
                             <CardTitle>Upload CSV</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-8 flex flex-col items-center justify-center gap-4 text-center hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors">
+                            <div className="relative border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-8 flex flex-col items-center justify-center gap-4 text-center hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors">
                                 <div className="p-4 rounded-full bg-primary/10 text-primary">
                                     <Upload className="h-8 w-8" />
                                 </div>

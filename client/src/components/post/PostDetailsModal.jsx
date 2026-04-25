@@ -89,7 +89,7 @@ const PostDetailsModal = ({ post, isOpen, onOpenChange, onRollbackSuccess }) => 
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="text-[10px] text-gray-500 uppercase">Account</span>
-                                        <span className="text-xs font-medium truncate max-w-[100px]">{post.socialAccount?.platformUserName || 'Default'}</span>
+                                        <span className="text-xs font-medium truncate max-w-[100px]">{post.socialAccount?.displayName || post.socialAccount?.platformUserName || post.socialAccount?.channelTitle || 'Default'}</span>
                                     </div>
                                 </div>
                             </div>

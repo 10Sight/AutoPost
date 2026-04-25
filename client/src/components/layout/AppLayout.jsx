@@ -39,10 +39,15 @@ import {
     Home,
     TrendingUp,
     ShieldAlert,
-    Gavel
+    Gavel,
+    Crown,
+    Building2
 } from "lucide-react";
+import { cn } from "../../lib/utils";
 import { toast } from "sonner";
 import NotificationBell from "../common/NotificationBell";
+import ImpersonationBanner from "./ImpersonationBanner";
+import SuspendedScreen from "../common/SuspendedScreen";
 
 const baseTabs = [
     { link: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -68,10 +73,11 @@ const AppLayout = () => {
     const navigate = useNavigate();
     const { pathname } = useLocation();
     const user = useSelector(selectCurrentUser);
-    const { data: orgData } = useGetOrganizationQuery();
+    const { data: orgData, isLoading: isOrgLoading } = useGetOrganizationQuery();
     const [logoutApi, { isLoading }] = useLogoutMutation();
 
     const organization = orgData?.data;
+    const isSuspended = !isOrgLoading && organization && organization.status !== "active" && user?.role !== "superadmin";
     const branding = organization?.branding || {};
     const primaryColor = branding.primaryColor || "#2563eb"; // Fallback to blue-600
 
@@ -95,156 +101,79 @@ const AppLayout = () => {
     // Handle window resize for responsive behavior
     useEffect(() => {
         const handleResize = () => {
-            const mobile = window.innerWidth < 768;
-            setIsMobile(mobile);
-
-            if (mobile) {
+            setIsMobile(window.innerWidth < 768);
+            if (window.innerWidth < 820) {
                 setCollapsed(true);
-            } else if (window.innerWidth >= 1024) {
-                setCollapsed(false);
             }
         };
 
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
     }, []);
-
-    const toggleSidebar = () => {
-        setCollapsed((prev) => !prev);
-    };
 
     const handleLogout = async () => {
         try {
             await logoutApi().unwrap();
             dispatch(logOut());
-            navigate("/auth/login", { replace: true });
-        } catch (error) {
-            dispatch(logOut());
-            navigate("/auth/login", { replace: true });
+            navigate("/auth/login");
+        } catch (err) {
+            toast.error("Failed to logout");
         }
     };
 
-    const ToggleButton = ({ opened, onClick, ariaLabel }) => {
-        return (
-            <Menu
-                className={`min-w-5 min-h-5 duration-500 transition-all cursor-pointer text-[#4b5563] hover:text-[#1f2937]`}
-                onClick={onClick}
-                aria-label={ariaLabel}
-            />
-        );
-    };
-
     return (
-        <div className="flex min-h-screen bg-gradient-to-br from-[#f9fafb] via-[#eff6ff]/30 to-[#eef2ff]/20 dark:from-gray-900 dark:via-gray-800/30 dark:to-gray-900/20">
-            {/* Mobile overlay */}
-            {/* Mobile overlay - Removed as we have bottom nav now */}
+        <div className="flex h-screen bg-white dark:bg-[#0f172a] overflow-hidden font-sans">
+            {isSuspended && <SuspendedScreen status={organization?.status} />}
 
-            {/* Sidebar (Desktop) */}
-            {!isMobile && (
-                <nav
-                    className={`fixed top-0 left-0 h-screen bg-[#ffffff]/95 dark:bg-gray-900/95 backdrop-blur-xl border-r border-[#e5e7eb]/50 dark:border-gray-800/50 text-[#000000] dark:text-white shadow-2xl transition-all duration-300 z-20
-                ${collapsed ? "w-16" : "w-64"}`}
-                >
-                    <div
-                        className={`relative h-16 items-center flex transition-all p-4 duration-300 z-50 border-b border-[#e5e7eb]/80 dark:border-gray-800/80 bg-[#ffffff]/50 dark:bg-gray-900/50`}
-                    >
-                        <ToggleButton
-                            opened={!collapsed}
-                            onClick={toggleSidebar}
-                            ariaLabel="Toggle sidebar"
-                        />
-                        {!collapsed && (
-                            <div className="ml-4 flex items-center gap-2 overflow-hidden">
-                                {branding.logo ? (
-                                    <img src={branding.logo} alt="Logo" className="h-8 w-auto object-contain" />
-                                ) : (
-                                    <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                                        {organization?.name || "AutoPost"}
-                                    </span>
-                                )}
+            {/* Sidebar */}
+            <div
+                className={`${collapsed ? "w-20" : "w-72"
+                    } h-screen bg-white dark:bg-[#0f172a] border-r border-[#e2e8f0] dark:border-gray-800 transition-all duration-300 ease-in-out flex flex-col z-20 overflow-hidden relative
+          ${isMobile && (collapsed ? "-translate-x-full" : "translate-x-0 fixed")}`}
+            >
+                {/* Fixed Logo section */}
+                <div className={cn(
+                    "h-20 flex items-center border-b border-[#f1f5f9] dark:border-gray-800 bg-white/50 dark:bg-[#0f172a]/50 backdrop-blur-md transition-all duration-300",
+                    collapsed ? "px-5" : "px-6"
+                )}>
+                    <div className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0 transition-all duration-500",
+                        branding.logoUrl
+                            ? "bg-transparent"
+                            : "bg-primary shadow-lg shadow-primary/20"
+                    )}>
+                        {branding.logoUrl ? (
+                            <img
+                                src={branding.logoUrl}
+                                alt="Workspace Logo"
+                                className="w-full h-full object-contain"
+                            />
+                        ) : (
+                            <div className="w-6 h-6 flex items-center justify-center font-black text-white text-lg italic uppercase">
+                                {organization?.name?.charAt(0) || "1"}
                             </div>
                         )}
                     </div>
-
-                    {/* Sidebar Tabs */}
-                    <div className="px-3 flex flex-col w-full py-6 space-y-1 overflow-y-auto max-h-[calc(100vh-12rem)] scrollbar-thin scrollbar-thumb-[#d1d5db] scrollbar-track-[#f3f4f6] hover:scrollbar-thumb-[#9ca3af]">
-                        {baseTabs.map((item) => {
-                            // Hide Admin-only tabs
-                            if (["/dashboard/org-settings", "/dashboard/policy-rules"].includes(item.link) && user?.role !== "admin") {
-                                return null;
-                            }
-
-                            const isActive =
-                                pathname === item.link ||
-                                (item.link === "/dashboard" && pathname === "/dashboard") ||
-                                (item.link !== "/dashboard" && pathname.startsWith(item.link));
-
-                            return (
-                                <div
-                                    className={`group relative flex items-center cursor-pointer w-full overflow-hidden h-12 rounded-xl transition-all duration-300 hover:scale-[1.02]
-                ${isActive
-                                            ? "bg-gradient-to-r from-[#2563eb] to-[#1d4ed8] text-[#ffffff] shadow-lg shadow-[#bfdbfe] dark:shadow-blue-900/20"
-                                            : "text-[#4b5563] dark:text-gray-400 hover:bg-gradient-to-r hover:from-[#eff6ff] hover:to-[#eef2ff] hover:text-[#1d4ed8] dark:hover:from-gray-800 dark:hover:to-gray-800 dark:hover:text-blue-400 hover:shadow-md"
-                                        }
-                ${collapsed ? "justify-center mx-1" : "items-center px-4"}`}
-                                    key={item.label}
-                                    onClick={() => {
-                                        navigate(item.link);
-                                    }}
-                                >
-                                    {isActive && !collapsed && (
-                                        <div className="absolute left-0 top-0 h-full w-1 bg-[#ffffff] rounded-r-full" />
-                                    )}
-                                    <item.icon
-                                        className={`${collapsed ? "w-5 h-5" : "min-w-5 min-h-5"
-                                            } transition-transform group-hover:scale-110`}
-                                        strokeWidth={isActive ? 2.5 : 1.5}
-                                    />
-                                    {!collapsed && (
-                                        <span className="ml-3 text-sm font-medium transition-all group-hover:translate-x-0.5">
-                                            {item.label}
-                                        </span>
-                                    )}
-                                    {!collapsed && (
-                                        <div className={`ml-auto opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? 'text-[#bfdbfe]' : 'text-[#9ca3af]'
-                                            }`}>
-                                            <ChevronRight className="w-4 h-4" />
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Logout */}
-                    <div className="absolute bottom-6 w-full px-3">
-                        <div
-                            className={`group p-3 flex items-center rounded-xl w-full transition-all duration-300 ${isLoading
-                                ? "opacity-50 cursor-not-allowed bg-[#f3f4f6] dark:bg-gray-800"
-                                : "hover:bg-gradient-to-r hover:from-[#fef2f2] hover:to-[#fdf2f8] hover:text-[#dc2626] cursor-pointer hover:shadow-md dark:hover:from-red-900/10 dark:hover:to-red-900/10 dark:text-gray-400"
-                                } ${collapsed ? "justify-center mx-1" : "px-4"
-                                }`}
-                            onClick={isLoading ? undefined : handleLogout}
-                        >
-                            {isLoading ? (
-                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#dc2626]"></div>
-                            ) : (
-                                <LogOut className="min-w-5 min-h-5 transition-transform group-hover:scale-110" strokeWidth={1.5} />
-                            )}
-                            {!collapsed && (
-                                <span className="ml-3 text-sm font-medium transition-all group-hover:translate-x-0.5">
-                                    {isLoading ? "Logging out..." : "Logout"}
-                                </span>
-                            )}
+                    {!collapsed && (
+                        <div className="ml-3 flex flex-col transition-all duration-300">
+                            <span className="text-lg font-black tracking-tight text-[#1e293b] dark:text-gray-100 uppercase truncate max-w-[180px]">
+                                {organization?.name || "10Sight"}
+                            </span>
+                            <span className="text-[10px] font-bold text-[#64748b] dark:text-gray-400 tracking-[0.2em] uppercase -mt-1">
+                                Workspace
+                            </span>
                         </div>
-                    </div>
-                </nav>
-            )}
+                    )}
+                </div>
 
-            {/* Bottom Navigation (Mobile) */}
-            {isMobile && (
-                <nav className="fixed bottom-0 left-0 right-0 h-16 bg-[#ffffff]/90 dark:bg-gray-900/90 backdrop-blur-xl border-t border-[#e5e7eb]/50 dark:border-gray-800/50 rounded-t-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] flex justify-evenly items-center z-50 pb-safe">
+                {/* Sidebar Tabs */}
+                <div className="px-3 flex flex-col w-full py-6 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-hide max-h-[calc(100vh-12rem)]">
                     {baseTabs.map((item) => {
+                        // Hide Admin-only tabs
+                        if (["/dashboard/org-settings", "/dashboard/policy-rules"].includes(item.link) && user?.role !== "admin") {
+                            return null;
+                        }
+
                         const isActive =
                             pathname === item.link ||
                             (item.link === "/dashboard" && pathname === "/dashboard") ||
@@ -252,136 +181,188 @@ const AppLayout = () => {
 
                         return (
                             <div
+                                className={`group relative flex items-center cursor-pointer w-full overflow-hidden h-12 rounded-xl transition-all duration-300 hover:scale-[1.02]
+                ${isActive
+                                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                                        : "text-[#4b5563] dark:text-gray-400 hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary hover:shadow-md"
+                                    }
+                ${collapsed ? "justify-center mx-1" : "items-center px-4"}`}
                                 key={item.label}
-                                className={`relative flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all duration-300 active:scale-95 ${isActive ? '-translate-y-3' : ''}`}
-                                onClick={() => navigate(item.link)}
+                                onClick={() => {
+                                    navigate(item.link);
+                                }}
                             >
-                                <div className={`p-2 rounded-full transition-all duration-300 ${isActive
-                                    ? "bg-gradient-to-tr from-[#2563eb] to-[#4f46e5] text-white shadow-lg shadow-blue-500/30 ring-4 ring-white dark:ring-gray-900"
-                                    : "text-gray-500 dark:text-gray-400"
-                                    }`}>
-                                    <item.icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
-                                </div>
-                                {isActive && (
-                                    <span className="absolute -bottom-5 text-[10px] font-semibold text-gray-900 dark:text-white animate-in slide-in-from-top-1 fade-in duration-300 whitespace-nowrap">
+                                {isActive && !collapsed && (
+                                    <div className="absolute left-0 top-0 h-full w-1 bg-[#ffffff] rounded-r-full" />
+                                )}
+                                <item.icon
+                                    className={`${collapsed ? "w-5 h-5" : "min-w-5 min-h-5"
+                                        } transition-transform group-hover:scale-110`}
+                                    strokeWidth={isActive ? 2.5 : 1.5}
+                                />
+                                {!collapsed && (
+                                    <span className="ml-3 text-sm font-medium transition-all group-hover:translate-x-0.5">
                                         {item.label}
                                     </span>
+                                )}
+                                {!collapsed && (
+                                    <div className={`ml-auto opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? 'text-[#bfdbfe]' : 'text-[#9ca3af]'
+                                        }`}>
+                                        <ChevronRight className="w-4 h-4" />
+                                    </div>
                                 )}
                             </div>
                         );
                     })}
-                    <div
-                        className="relative flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all duration-300 active:scale-95"
-                        onClick={handleLogout}
-                    >
-                        <div className="p-2 rounded-full text-red-500">
-                            <LogOut className="w-5 h-5" strokeWidth={2} />
+                </div>
+
+                {/* Superadmin Panel Access */}
+                {user?.role === "superadmin" && (
+                    <div className="px-3 mb-2">
+                        <div
+                            className={cn("group p-3 flex items-center rounded-xl w-full transition-all duration-300 bg-primary/10 text-primary border border-primary/20 cursor-pointer hover:bg-primary/20 hover:shadow-md overflow-hidden", collapsed && "justify-center")}
+                            onClick={() => navigate("/admin-panel")}
+                        >
+                            <Crown className={cn("min-w-5 min-h-5 animate-pulse", collapsed ? "" : "mr-3")} />
+                            {!collapsed && (
+                                <span className="text-sm font-black uppercase tracking-tighter">
+                                    Command Center
+                                </span>
+                            )}
                         </div>
                     </div>
-                </nav>
-            )}
+                )}
+
+                {/* Logout */}
+                <div className="absolute bottom-6 w-full px-3">
+                    <div
+                        className={cn("group p-3 flex items-center rounded-xl w-full transition-all duration-300 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 cursor-pointer overflow-hidden", collapsed && "justify-center")}
+                        onClick={handleLogout}
+                    >
+                        <LogOut className={cn("min-w-5 min-h-5 transition-transform group-hover:-translate-x-0.5", collapsed ? "" : "mr-3")} />
+                        {!collapsed && (
+                            <span className="text-sm font-bold">Sign Out</span>
+                        )}
+                    </div>
+                </div>
+            </div>
 
             {/* Main Content Area */}
-            <div
-                className={`flex-1 transition-all duration-300 ${isMobile ? "ml-0 mb-20" : collapsed ? "ml-16" : "ml-64"
-                    }`}
-            >
+            <div className="flex-1 flex flex-col min-w-0 bg-[#f8fafc] dark:bg-[#020617] overflow-hidden relative">
                 {/* Header */}
-                <header
-                    className={`px-4 sm:px-6 bg-[#ffffff]/95 dark:bg-gray-900/95 backdrop-blur-lg shadow-sm border-b border-[#e5e7eb]/80 dark:border-gray-800/80 flex h-16 items-center justify-between gap-2 sm:gap-4 fixed right-0 top-0 z-30 transition-all duration-300 ${isMobile ? "w-full" : collapsed ? "w-[calc(100%-4rem)]" : "w-[calc(100%-16rem)]"
-                        }`}
-                >
-                    {/* Mobile menu button */}
-                    <div className="flex items-center gap-3">
-                        {/* Mobile menu button - Removed */}
+                <header className="h-20 flex items-center justify-between px-8 border-b border-[#f1f5f9] dark:border-gray-800 bg-white/70 dark:bg-[#0f172a]/70 backdrop-blur-xl z-10">
+                    <div className="flex items-center gap-4">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setCollapsed(!collapsed)}
+                            className="text-[#64748b] dark:text-gray-400 hover:bg-[#f1f5f9] dark:hover:bg-gray-800 rounded-xl"
+                        >
+                            <Menu className="h-5 w-5" />
+                        </Button>
 
-                        {/* Breadcrumb */}
-                        <Breadcrumb className="hidden sm:block">
-                            <BreadcrumbList>
-                                <BreadcrumbItem>
-                                    <Link
-                                        to="/dashboard"
-                                        className="flex items-center text-[#2563eb] hover:text-[#1e40af] dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                                    >
-                                        <Home size={18} aria-hidden="true" />
-                                        <span className="sr-only">Home</span>
-                                    </Link>
-                                </BreadcrumbItem>
-                                <BreadcrumbSeparator />
-                                <BreadcrumbItem>
-                                    <BreadcrumbPage className="text-[#1f2937] dark:text-gray-200 font-medium">
-                                        {pageName}
-                                    </BreadcrumbPage>
-                                </BreadcrumbItem>
-                            </BreadcrumbList>
-                        </Breadcrumb>
+                        <div className="hidden lg:block h-6 w-[1px] bg-[#e2e8f0] dark:bg-gray-800 mx-1" />
 
-                        {/* Mobile page title */}
-                        <h1 className="font-semibold text-[#1f2937] dark:text-white text-lg sm:hidden">
-                            {pageName}
-                        </h1>
+                        <div className="hidden md:flex flex-col">
+                            <Breadcrumb>
+                                <BreadcrumbList>
+                                    <BreadcrumbItem>
+                                        <Link to="/dashboard" className="text-xs font-bold text-[#94a3b8] hover:text-[#2563eb] transition-colors flex items-center gap-1">
+                                            <Home className="w-3 h-3" /> PRIORITIZE
+                                        </Link>
+                                    </BreadcrumbItem>
+                                    <BreadcrumbSeparator />
+                                    <BreadcrumbItem>
+                                        <BreadcrumbPage className="text-xs font-black text-[#1e293b] dark:text-white uppercase tracking-wider">{pageName}</BreadcrumbPage>
+                                    </BreadcrumbItem>
+                                </BreadcrumbList>
+                            </Breadcrumb>
+                        </div>
                     </div>
 
-                    {/* Right side (Notifications & Avatar) */}
-                    <div className="flex items-center gap-2 sm:gap-3">
-                        <NotificationBell />
+                    <div className="flex items-center gap-6">
+                        {/* Global Search */}
+                        <div className="hidden xl:flex relative group">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94a3b8] group-focus-within:text-[#2563eb] transition-colors" />
+                            <input
+                                type="text"
+                                placeholder="Global search..."
+                                className="w-64 h-10 pl-10 pr-4 bg-[#f8fafc] dark:bg-gray-900 border border-[#e2e8f0] dark:border-gray-800 rounded-xl text-sm transition-all focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                            />
+                        </div>
 
-                        {/* User Dropdown Menu */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:ring-2 hover:ring-[#bfdbfe] dark:hover:ring-blue-900 transition-all">
-                                    <Avatar className="h-9 w-9">
-                                        <AvatarImage
-                                            src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=${primaryColor.replace('#', '')}&color=fff`}
-                                            alt={user?.name || 'User'}
-                                        />
-                                        <AvatarFallback style={{ backgroundColor: primaryColor }} className="text-[#ffffff]">
-                                            {(user?.name || 'U').charAt(0).toUpperCase()}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div className="absolute bg-[#22c55e] rounded-full bottom-0 right-0 size-2.5 border-2 border-[#ffffff] dark:border-gray-900 animate-pulse"></div>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-64 p-2" align="end" forceMount>
-                                <DropdownMenuLabel className="font-normal">
-                                    <div className="flex flex-col space-y-1">
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-sm font-medium text-[#111827] dark:text-white">
-                                                {user?.name || 'User'}
-                                            </p>
-                                            <Badge variant="secondary" className="text-xs">
-                                                {organization?.name || "Organization"}
-                                            </Badge>
-                                        </div>
-                                        <p className="text-xs text-[#6b7280] dark:text-gray-400">
-                                            {user?.email}
-                                        </p>
+                        <div className="flex items-center gap-3">
+                            <NotificationBell />
+
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <div className="flex items-center gap-3 p-1 pr-3 rounded-full hover:bg-[#f1f5f9] dark:hover:bg-gray-800 cursor-pointer transition-all border border-[#f1f5f9] dark:border-gray-800">
+                                        <Avatar className="h-9 w-9 border-2 border-white dark:border-gray-700 shadow-sm">
+                                            <AvatarImage
+                                                src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || "U")}&background=random`}
+                                                className="object-cover"
+                                            />
+                                            <AvatarFallback className="font-bold text-sm bg-[#2563eb] text-white">
+                                                {user?.name?.[0] || "U"}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        {!isMobile && (
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-black text-[#1e293b] dark:text-gray-100 leading-none mb-1 capitalize truncate max-w-[100px]">
+                                                    {user?.name}
+                                                </span>
+                                                <span className="text-[10px] font-bold text-blue-600 leading-none uppercase tracking-tighter">
+                                                    {user?.role}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
-                                </DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="cursor-pointer hover:bg-[#eff6ff] dark:hover:bg-gray-800" onClick={() => navigate('/dashboard/accounts')}>
-                                    <Settings className="mr-2 h-4 w-4" />
-                                    Data Settings
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                    className="cursor-pointer hover:bg-[#fef2f2] text-[#dc2626] focus:text-[#dc2626] dark:focus:bg-red-900/20"
-                                    onClick={handleLogout}
-                                >
-                                    <LogOut className="mr-2 h-4 w-4" />
-                                    Logout
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56 mt-2 rounded-2xl p-2 border-[#f1f5f9] dark:border-gray-800 shadow-2xl">
+                                    <DropdownMenuLabel className="px-3 py-2">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-black text-[#1e293b]">{user?.name}</span>
+                                            <span className="text-xs text-[#64748b]">{user?.email}</span>
+                                        </div>
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => navigate("/dashboard/profile")} className="rounded-xl p-3 gap-3 cursor-pointer">
+                                        <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                                            <User className="w-4 h-4" />
+                                        </div>
+                                        <span className="font-semibold text-sm">Profile Settings</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => navigate("/dashboard/account-status")} className="rounded-xl p-3 gap-3 cursor-pointer">
+                                        <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                            <Laptop2 className="w-4 h-4" />
+                                        </div>
+                                        <span className="font-semibold text-sm">Account Status</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        className="rounded-xl p-3 gap-3 cursor-pointer text-rose-600 hover:bg-rose-50"
+                                        onClick={handleLogout}
+                                    >
+                                        <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
+                                            <LogOut className="w-4 h-4" />
+                                        </div>
+                                        <span className="font-black text-sm">Sign Out</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
                 </header>
 
-                {/* Page Content */}
-                <div className={`pt-20 pb-6 px-4 sm:px-6 min-h-screen ${isMobile ? 'pb-24' : ''}`}>
-                    <div className="bg-[#ffffff]/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-sm border border-[#e5e7eb]/50 dark:border-gray-700/50 p-4 sm:p-6 transition-all duration-300 hover:shadow-md">
-                        <Outlet />
-                    </div>
-                </div>
+                {/* Content */}
+                <ImpersonationBanner />
+                <main className="flex-1 overflow-y-auto relative scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+                    <Outlet />
+                    <footer className="mt-8 p-8 flex flex-col items-center gap-2 opacity-30 group hover:opacity-100 transition-opacity">
+                        <div className="h-[1px] w-12 bg-slate-300 dark:bg-gray-700" />
+                        <span className="text-[10px] font-black tracking-[0.5em] text-slate-400">10SIGHT v2.0</span>
+                    </footer>
+                </main>
             </div>
         </div>
     );

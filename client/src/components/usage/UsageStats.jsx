@@ -1,5 +1,5 @@
 import React from 'react';
-import { useGetUsageQuery } from '../../redux/slices/usageApiSlice';
+import { useGetAccountUsageQuery } from '../../redux/slices/usageApiSlice';
 import { Progress } from "../../components/ui/progress";
 import {
     FileText,
@@ -12,8 +12,8 @@ import { Link } from 'react-router-dom';
 import { Button } from "../ui/button";
 
 const UsageStats = () => {
-    const { data: usageResponse, isLoading } = useGetUsageQuery();
-    const usage = usageResponse?.data;
+    const { data: usageResponse, isLoading } = useGetAccountUsageQuery();
+    const usage = usageResponse?.data?.usage;
 
     if (isLoading) {
         return <div className="animate-pulse h-48 bg-gray-100 dark:bg-gray-800 rounded-xl" />;
@@ -100,7 +100,7 @@ const UsageStats = () => {
             </div>
 
             <div className="p-4 bg-gray-50/50 dark:bg-gray-800/20 border-t border-gray-100 dark:border-gray-800">
-                <Link to="/dashboard/org-settings">
+                <Link to="/dashboard/account-status">
                     <Button variant="ghost" size="sm" className="w-full text-xs gap-2 group">
                         Manage Subscriptions <ArrowUpRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </Button>

@@ -82,11 +82,25 @@ class YouTubeService extends PlatformService {
     }
 
     async postContent(account, post) {
-        const { caption: content, mediaId: media, youtubePrivacyStatus, youtubeTags, youtubeCategoryId, youtubeThumbnailUrl, publishAt, platformPostId } = post;
-        const mediaUrl = media ? media.url : null;
+        const { caption: content, mediaIds, youtubePrivacyStatus, youtubeTags, youtubeCategoryId, youtubeThumbnailUrl, thumbnailUrl, publishAt, platformPostId } = post;
+        const mediaUrl = mediaIds && mediaIds.length > 0 ? mediaIds[0].url : null;
+
+        if (mediaIds && mediaIds.length > 1) {
+            throw new Error("YouTube does not support multiple media items in a single post.");
+        }
 
         if (!mediaUrl) {
             throw new Error("YouTube requires a video for posting.");
+        }
+
+        // PRODUCTION GUARDRAIL: YouTube Shorts Aspect Ratio
+        if (post.postType === "short") {
+            const media = mediaIds[0];
+            if (media && media.width && media.height) {
+                if (media.width > media.height) {
+                    throw new Error("YouTube Shorts must be vertical videos (9:16). Please upload a vertical video.");
+                }
+            }
         }
 
         // Idempotency check: If already posted, return existing ID
@@ -127,10 +141,23 @@ class YouTubeService extends PlatformService {
             const response = await axios.get(mediaUrl, { responseType: "stream" });
 
             // Prepare metadata
+            const isShort = post.postType === "short";
+            let finalTitle = title;
+            let finalDescription = description;
+
+            if (isShort) {
+                if (!finalTitle.toLowerCase().includes("#shorts")) {
+                    finalTitle = (finalTitle.substring(0, 92) + " #Shorts").trim();
+                }
+                if (!finalDescription.toLowerCase().includes("#shorts")) {
+                    finalDescription = (finalDescription + "\n\n#Shorts").trim();
+                }
+            }
+
             const requestBody = {
                 snippet: {
-                    title: title,
-                    description: description,
+                    title: finalTitle,
+                    description: finalDescription,
                     tags: youtubeTags?.length > 0 ? youtubeTags : ["AutoPost", "SocialMedia"],
                     categoryId: youtubeCategoryId || "22", // Default to People & Blogs (22) if not specified
                 },
@@ -193,13 +220,14 @@ class YouTubeService extends PlatformService {
             await this.consumeQuota(post.organizationId, unitsRequired);
 
             // Handle custom thumbnail if provided (Costs 50 units)
-            if (youtubeThumbnailUrl && videoId) {
+            const targetThumbnail = thumbnailUrl || youtubeThumbnailUrl;
+            if (targetThumbnail && videoId) {
                 try {
                     // Check quota for thumbnail
                     await this.checkQuotaAvailability(post.organizationId, 50);
 
-                    logger.info(`[YouTube] Uploading custom thumbnail from ${youtubeThumbnailUrl}`);
-                    const thumbResponse = await axios.get(youtubeThumbnailUrl, { responseType: "stream" });
+                    logger.info(`[YouTube] Uploading custom thumbnail from ${targetThumbnail}`);
+                    const thumbResponse = await axios.get(targetThumbnail, { responseType: "stream" });
                     await youtube.thumbnails.set({
                         videoId: videoId,
                         media: {
@@ -216,6 +244,19 @@ class YouTubeService extends PlatformService {
                     logger.warn(`[YouTube] Failed to upload custom thumbnail for ${videoId}:`, thumbError.message);
                     // Don't fail the whole post if thumbnail fails
                 }
+            }
+
+            // Refresh Channel Stats in background to keep metadata up to date
+            try {
+                const freshStats = await this.getChannelStats(account);
+                account.metadata = {
+                    ...account.metadata,
+                    statistics: freshStats
+                };
+                await account.save();
+                logger.info(`[YouTube] Metadata updated after post for ${account.platformUserName}`);
+            } catch (statsError) {
+                logger.warn(`[YouTube] Failed to refresh channel stats after post: ${statsError.message}`);
             }
 
             return {
@@ -257,6 +298,245 @@ class YouTubeService extends PlatformService {
             return !!response.data.aud;
         } catch (error) {
             return false;
+        }
+    }
+
+    /**
+     * @desc    Fetch real-time statistics for a YouTube video
+     * @param   {Object} account - The SocialAccount document
+     * @param   {string} videoId - The YouTube Video ID
+     */
+    async getVideoStats(account, videoId) {
+        try {
+            // Check if token is expired
+            const isExpired = account.expiresAt && (new Date(account.expiresAt).getTime() - Date.now() < 5 * 60 * 1000);
+            let currentAccessToken = account.accessToken;
+            if (isExpired && account.refreshToken) {
+                currentAccessToken = await this.refreshAccessToken(account);
+            }
+
+            const auth = this.getOAuthClient();
+            auth.setCredentials({ access_token: currentAccessToken });
+
+            const youtube = google.youtube({ version: "v3", auth });
+
+            // Stats fetch costs 1 quota unit
+            const res = await youtube.videos.list({
+                part: "statistics,snippet",
+                id: videoId,
+            });
+
+            if (!res.data.items || res.data.items.length === 0) {
+                throw new ApiError(404, "Video not found on YouTube.");
+            }
+
+            const video = res.data.items[0];
+            return {
+                views: parseInt(video.statistics.viewCount || 0),
+                likes: parseInt(video.statistics.likeCount || 0),
+                comments: parseInt(video.statistics.commentCount || 0),
+                title: video.snippet.title,
+                publishedAt: video.snippet.publishedAt
+            };
+        } catch (error) {
+            logger.error(`[YouTube] Error fetching stats for ${videoId}:`, error);
+            throw new Error(`Failed to fetch YouTube stats: ${error.message}`);
+        }
+    }
+
+    /**
+     * @desc    Fetch comment threads for a YouTube video
+     * @param   {Object} account - The SocialAccount document
+     * @param   {string} videoId - The YouTube Video ID
+     */
+    async getVideoComments(account, videoId) {
+        try {
+            const isExpired = account.expiresAt && (new Date(account.expiresAt).getTime() - Date.now() < 5 * 60 * 1000);
+            let currentAccessToken = account.accessToken;
+            if (isExpired && account.refreshToken) {
+                currentAccessToken = await this.refreshAccessToken(account);
+            }
+
+            const auth = this.getOAuthClient();
+            auth.setCredentials({ access_token: currentAccessToken });
+
+            const youtube = google.youtube({ version: "v3", auth });
+
+            // Comment fetch costs 1 quota unit
+            const res = await youtube.commentThreads.list({
+                part: "snippet,replies",
+                videoId: videoId,
+                maxResults: 50,
+                order: "relevance"
+            });
+
+            return (res.data.items || []).map(item => ({
+                id: item.snippet.topLevelComment.id,
+                threadId: item.id,
+                author: item.snippet.topLevelComment.snippet.authorDisplayName,
+                authorAvatar: item.snippet.topLevelComment.snippet.authorProfileImageUrl,
+                text: item.snippet.topLevelComment.snippet.textDisplay,
+                publishedAt: item.snippet.topLevelComment.snippet.publishedAt,
+                likeCount: item.snippet.topLevelComment.snippet.likeCount,
+                viewerRating: item.snippet.topLevelComment.snippet.viewerRating,
+                replyCount: item.snippet.totalReplyCount,
+                replies: (item.replies?.comments || []).map(reply => ({
+                    id: reply.id,
+                    author: reply.snippet.authorDisplayName,
+                    authorAvatar: reply.snippet.authorProfileImageUrl,
+                    text: reply.snippet.textDisplay,
+                    publishedAt: reply.snippet.publishedAt,
+                    likeCount: reply.snippet.likeCount,
+                    viewerRating: reply.snippet.viewerRating,
+                    threadId: item.id, // Replies belong to this thread
+                }))
+            }));
+        } catch (error) {
+            logger.error(`[YouTube] Error fetching comments for ${videoId}:`, error);
+            throw new Error(`Failed to fetch YouTube comments: ${error.message}`);
+        }
+    }
+
+    /**
+     * @desc    Post a comment or reply to a YouTube video
+     * @param   {Object} account - The SocialAccount document
+     * @param   {string} videoId - The YouTube Video ID
+     * @param   {string} text - The comment content
+     * @param   {string} parentId - (Optional) ID of the parent comment for replies
+     */
+    async postVideoComment(account, videoId, text, parentId = null) {
+        try {
+            const isExpired = account.expiresAt && (new Date(account.expiresAt).getTime() - Date.now() < 5 * 60 * 1000);
+            let currentAccessToken = account.accessToken;
+            if (isExpired && account.refreshToken) {
+                currentAccessToken = await this.refreshAccessToken(account);
+            }
+
+            const auth = this.getOAuthClient();
+            auth.setCredentials({ access_token: currentAccessToken });
+
+            const youtube = google.youtube({ version: "v3", auth });
+
+            // Posting a comment costs 50 units
+            await this.checkQuotaAvailability(account.organizationId, 50);
+
+            let res;
+            if (parentId) {
+                // Reply to a comment
+                res = await youtube.comments.insert({
+                    part: "snippet",
+                    requestBody: {
+                        snippet: {
+                            parentId: parentId,
+                            textOriginal: text
+                        }
+                    }
+                });
+            } else {
+                // New comment thread
+                res = await youtube.commentThreads.insert({
+                    part: "snippet",
+                    requestBody: {
+                        snippet: {
+                            videoId: videoId,
+                            topLevelComment: {
+                                snippet: {
+                                    textOriginal: text
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            await this.consumeQuota(account.organizationId, 50);
+            return res.data;
+        } catch (error) {
+            logger.error(`[YouTube] Error posting comment to ${videoId}:`, error);
+            throw new Error(`Failed to post YouTube comment: ${error.message}`);
+        }
+    }
+
+    /**
+     * @desc    Fetch real-time channel statistics
+     * @param   {Object} account - The SocialAccount document
+     */
+    async getChannelStats(account) {
+        try {
+            const isExpired = account.expiresAt && (new Date(account.expiresAt).getTime() - Date.now() < 5 * 60 * 1000);
+            let currentAccessToken = account.accessToken;
+            if (isExpired && account.refreshToken) {
+                currentAccessToken = await this.refreshAccessToken(account);
+            }
+
+            const auth = this.getOAuthClient();
+            auth.setCredentials({ access_token: currentAccessToken });
+
+            const youtube = google.youtube({ version: "v3", auth });
+
+            // Channel list costs 1 quota unit
+            const res = await youtube.channels.list({
+                part: "statistics,snippet",
+                mine: true,
+            });
+
+            if (!res.data.items || res.data.items.length === 0) {
+                throw new Error("Channel not found");
+            }
+
+            const channel = res.data.items[0];
+            return {
+                subscriberCount: channel.statistics.subscriberCount,
+                viewCount: channel.statistics.viewCount,
+                videoCount: channel.statistics.videoCount,
+                hiddenSubscriberCount: channel.statistics.hiddenSubscriberCount,
+            };
+        } catch (error) {
+            logger.error(`[YouTube] Error fetching channel stats:`, error);
+            throw error;
+        }
+    }
+    /**
+     * @desc    Set rating for a comment
+     * @param   {Object} account - The SocialAccount document
+     * @param   {string} commentId - The YouTube comment ID
+     * @param   {string} rating - 'like' or 'none'
+     */
+    async setCommentRating(account, commentId, rating) {
+        try {
+            const isExpired = account.expiresAt && (new Date(account.expiresAt).getTime() - Date.now() < 5 * 60 * 1000);
+            let currentAccessToken = account.accessToken;
+            if (isExpired && account.refreshToken) {
+                currentAccessToken = await this.refreshAccessToken(account);
+            }
+
+            // setRating costs 50 units
+            await this.checkQuotaAvailability(account.organizationId, 50);
+
+            // Using the auth client's request method for maximum reliability
+            const auth = this.getOAuthClient();
+            auth.setCredentials({ access_token: currentAccessToken });
+            
+            await auth.request({
+                url: "https://www.googleapis.com/youtube/v3/comments/setRating",
+                method: "POST",
+                params: {
+                    id: commentId,
+                    rating: rating
+                }
+            });
+
+            await this.consumeQuota(account.organizationId, 50);
+            return true;
+        } catch (error) {
+            const errorData = error.response?.data;
+            const errorMsg = errorData?.error?.message || error.message;
+            logger.error(`[YouTube] Error setting rating for ${commentId}:`, {
+                message: errorMsg,
+                data: errorData,
+                status: error.response?.status
+            });
+            throw new Error(`Failed to set YouTube comment rating: ${errorMsg}`);
         }
     }
 }

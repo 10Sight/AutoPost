@@ -23,7 +23,7 @@ const userSchema = new Schema(
         },
         role: {
             type: String,
-            enum: ["user", "admin", "creator", "reviewer", "publisher"],
+            enum: ["user", "admin", "creator", "reviewer", "publisher", "superadmin"],
             default: "user",
         },
         organizationId: {
@@ -33,6 +33,9 @@ const userSchema = new Schema(
             index: true,
         },
         refreshToken: {
+            type: String,
+        },
+        avatar: {
             type: String,
         },
     },
@@ -50,7 +53,7 @@ userSchema.methods.isPasswordCorrect = async function (password) {
     return await bcrypt.compare(password, this.password);
 };
 
-userSchema.methods.generateAccessToken = function () {
+userSchema.methods.generateAccessToken = function (extraPayload = {}) {
     return jwt.sign(
         {
             _id: this._id,
@@ -58,6 +61,7 @@ userSchema.methods.generateAccessToken = function () {
             name: this.name,
             role: this.role,
             organizationId: this.organizationId,
+            ...extraPayload
         },
         config.JWT_SECRET,
         {
