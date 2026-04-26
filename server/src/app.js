@@ -4,12 +4,22 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 
 import { config } from "./config/env.config.js";
-
 import { handleStripeWebhook } from "./controllers/billing.controller.js";
+import { ApiError } from "./utils/ApiError.js";
+
+// ESM __dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
+
+// ... existing code ...
+// (I will use replace_file_content to swap the whole file structure)
 
 // Rate Limiting
 const limiter = rateLimit({
@@ -117,27 +127,28 @@ app.use("/api/v1/engagement", engagementRouter);
 app.use("/api/v1/invitations", invitationRouter);
 
 // Serve Frontend in Production
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// If you are serving the built frontend from the server:
 if (config.NODE_ENV === "production") {
     const buildPath = path.join(__dirname, "../../client/dist");
-    app.use(express.static(buildPath));
     
-    app.get("(.*)", (req, res) => {
-        if (!req.path.startsWith("/api/")) {
-            res.sendFile(path.join(buildPath, "index.html"));
-        }
-    });
+    if (fs.existsSync(buildPath)) {
+        app.use(express.static(buildPath));
+        
+        app.get("(.*)", (req, res) => {
+            if (!req.path.startsWith("/api/")) {
+                const indexPath = path.join(buildPath, "index.html");
+                if (fs.existsSync(indexPath)) {
+                    res.sendFile(indexPath);
+                } else {
+                    res.status(404).send("Frontend build not found. Please build the client.");
+                }
+            }
+        });
+    } else {
+        console.warn("[Production Warning] Client dist folder not found at:", buildPath);
+    }
 }
 
 // Error handling middleware
-import { ApiError } from "./utils/ApiError.js";
-
 app.use((err, req, res, next) => {
     const response = {
         success: false,
