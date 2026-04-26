@@ -128,7 +128,7 @@ if (config.NODE_ENV === "production") {
     const buildPath = path.join(__dirname, "../../client/dist");
     app.use(express.static(buildPath));
     
-    app.get("*", (req, res) => {
+    app.get("(.*)", (req, res) => {
         if (!req.path.startsWith("/api/")) {
             res.sendFile(path.join(buildPath, "index.html"));
         }
