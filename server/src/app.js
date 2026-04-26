@@ -7,7 +7,7 @@ import rateLimit from "express-rate-limit";
 
 import { config } from "./config/env.config.js";
 
-import { razorpayWebhook, stripeWebhook } from "./controllers/billing.controller.js";
+import { handleStripeWebhook } from "./controllers/billing.controller.js";
 
 const app = express();
 
@@ -52,11 +52,8 @@ app.use(
     })
 );
 
-// Razorpay Webhook
-app.post("/api/v1/razorpay/webhook", express.json(), razorpayWebhook);
-
 // Stripe Webhook (Raw body required for signature verification)
-app.post("/api/v1/stripe/webhook", express.raw({ type: "application/json" }), stripeWebhook);
+app.post("/api/v1/stripe/webhook", express.raw({ type: "application/json" }), handleStripeWebhook);
 
 app.use(
     helmet({
@@ -118,6 +115,25 @@ app.use("/api/v1/notifications", verifyJWT, tenantMiddleware, notificationRouter
 app.use("/api/v1/account-groups", verifyJWT, tenantMiddleware, accountGroupRouter);
 app.use("/api/v1/engagement", engagementRouter);
 app.use("/api/v1/invitations", invitationRouter);
+
+// Serve Frontend in Production
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// If you are serving the built frontend from the server:
+if (config.NODE_ENV === "production") {
+    const buildPath = path.join(__dirname, "../../client/dist");
+    app.use(express.static(buildPath));
+    
+    app.get("*", (req, res) => {
+        if (!req.path.startsWith("/api/")) {
+            res.sendFile(path.join(buildPath, "index.html"));
+        }
+    });
+}
 
 // Error handling middleware
 import { ApiError } from "./utils/ApiError.js";

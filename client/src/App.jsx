@@ -28,6 +28,8 @@ import ProfileSettings from "./pages/ProfileSettings";
 import AccountStatus from "./pages/AccountStatus";
 import PostEngagement from "./pages/PostEngagement";
 import MediaEditorPage from "./pages/MediaEditorPage";
+import Pricing from "./pages/Pricing";
+import BillingSettings from "./pages/BillingSettings";
 
 // Superadmin Pages
 import SuperadminLayout from './components/layout/SuperadminLayout';
@@ -75,6 +77,8 @@ const App = () => {
                 <Route path="policy-rules" element={<PolicyRules />} />
                 <Route path="create" element={<CreatePost />} />
                 <Route path="engagement/:postId" element={<PostEngagement />} />
+                <Route path="billing" element={<BillingSettings />} />
+                <Route path="pricing" element={<Pricing />} />
               </Route>
               
               {/* Immersive Pages (No Sidebar) */}

@@ -72,13 +72,31 @@ const organizationSchema = new Schema(
                 enum: ["free", "pro", "enterprise"],
                 default: "free"
             },
+            billingCycle: {
+                type: String,
+                enum: ["monthly", "yearly"],
+                default: "monthly"
+            },
             subscriptionStatus: {
                 type: String,
-                enum: ["active", "past_due", "canceled", "trialing", "incomplete", "unpaid"],
+                enum: ["active", "past_due", "canceled", "trialing", "incomplete", "unpaid", "cancelling"],
                 default: "incomplete"
             },
             currentPeriodEnd: {
                 type: Date
+            },
+            // Professional Billing Profile
+            taxId: {
+                type: String,
+                trim: true
+            },
+            companyName: {
+                type: String,
+                trim: true
+            },
+            address: {
+                type: String,
+                trim: true
             }
         }
     },

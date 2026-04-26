@@ -23,29 +23,60 @@ export const organizationApiSlice = apiSlice.injectEndpoints({
             }),
             invalidatesTags: ["Organization"],
         }),
-        createRazorpayOrder: builder.mutation({
-            query: (plan) => ({
-                url: "/billing/create-order",
+        createStripeCheckout: builder.mutation({
+            query: (data) => ({
+                url: "/billing/stripe/create-session",
                 method: "POST",
-                body: { plan },
+                body: data,
             }),
         }),
-        createStripeCheckout: builder.mutation({
-            query: (plan) => ({
-                url: "/billing/stripe-checkout",
+        getBillingStatus: builder.query({
+            query: () => ({
+                url: "/billing/status",
+            }),
+            providesTags: ["Billing"],
+        }),
+        createRazorpayOrder: builder.mutation({
+            query: (data) => ({
+                url: "/billing/razorpay/create-order",
                 method: "POST",
-                body: { plan },
+                body: data,
             }),
         }),
         verifyRazorpayPayment: builder.mutation({
             query: (paymentData) => ({
-                url: "/billing/verify-payment",
+                url: "/billing/razorpay/verify",
                 method: "POST",
                 body: paymentData,
             }),
-            invalidatesTags: ["Organization"],
+            invalidatesTags: ["Billing", "Organization"],
+        }),
+        cancelSubscription: builder.mutation({
+            query: () => ({
+                url: "/billing/cancel",
+                method: "POST",
+            }),
+            invalidatesTags: ["Billing"],
+        }),
+        updateBillingDetails: builder.mutation({
+            query: (data) => ({
+                url: "/billing/update-details",
+                method: "PATCH",
+                body: data,
+            }),
+            invalidatesTags: ["Billing"],
         }),
     }),
 });
 
-export const { useGetOrganizationQuery, useUpdateOrganizationMutation, useGetPublicOrganizationQuery, useCreateRazorpayOrderMutation, useVerifyRazorpayPaymentMutation, useCreateStripeCheckoutMutation } = organizationApiSlice;
+export const { 
+    useGetOrganizationQuery, 
+    useUpdateOrganizationMutation, 
+    useGetPublicOrganizationQuery, 
+    useCreateStripeCheckoutMutation, 
+    useGetBillingStatusQuery,
+    useCreateRazorpayOrderMutation,
+    useVerifyRazorpayPaymentMutation,
+    useCancelSubscriptionMutation,
+    useUpdateBillingDetailsMutation
+} = organizationApiSlice;

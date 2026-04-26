@@ -270,4 +270,53 @@ export class MailService {
             logger.error(`Failed to send invitation email:`, error);
         }
     }
+
+    /**
+     * Send professional invoice email with PDF attachment
+     */
+    static async sendInvoiceEmail(to, data, attachmentPath) {
+        if (!this.transporter) await this.init();
+
+        const mailOptions = {
+            from: `"10Sight Billing" <${process.env.GOOGLE_SMTP_USER}>`,
+            to: to,
+            subject: `📄 Your Invoice for ${data.planName} Plan`,
+            html: `
+                <div style="font-family: sans-serif; padding: 30px; border: 1px solid #f0f0f0; border-radius: 15px; max-width: 600px; margin: auto;">
+                    <h2 style="color: #2563eb;">Payment Successful!</h2>
+                    <p>Hi ${data.adminName},</p>
+                    <p>Thank you for subscribing to the <strong>${data.planName} Plan</strong>. Your account limits have been updated successfully.</p>
+                    
+                    <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin: 25px 0; border: 1px solid #e2e8f0;">
+                        <p style="margin: 5px 0;"><strong>Plan:</strong> ${data.planName}</p>
+                        <p style="margin: 5px 0;"><strong>Amount Paid:</strong> $${(data.amount / 100).toFixed(2)}</p>
+                        <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+                    </div>
+
+                    <p>We've attached your formal invoice to this email for your records.</p>
+
+                    <hr style="border: 0; border-top: 1px solid #f0f0f0; margin: 30px 0;">
+                    <p style="color: #94a3b8; font-size: 12px; text-align: center;">
+                        10Sight Billing System &bull; Professional SaaS Suite
+                    </p>
+                </div>
+            `,
+            attachments: [
+                {
+                    filename: `Invoice_${data.invoiceId}.pdf`,
+                    path: attachmentPath,
+                    contentType: "application/pdf"
+                }
+            ]
+        };
+
+        try {
+            if (this.transporter) {
+                await this.transporter.sendMail(mailOptions);
+                logger.info(`Invoice email sent to: ${to}`);
+            }
+        } catch (error) {
+            logger.error(`Failed to send invoice email:`, error);
+        }
+    }
 }
