@@ -71,11 +71,11 @@ app.use(
         contentSecurityPolicy: {
             directives: {
                 ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-                "script-src": ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://accounts.google.com"],
+                "script-src": ["'self'", "'unsafe-inline'", "https://*.razorpay.com", "https://checkout.razorpay.com", "https://accounts.google.com"],
                 "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
                 "img-src": ["'self'", "data:", "https://res.cloudinary.com", "https://*.googleusercontent.com"],
-                "connect-src": ["'self'", "https://api.cloudinary.com", "https://luna.razorpay.com"],
-                "frame-src": ["'self'", "https://checkout.razorpay.com", "https://accounts.google.com"],
+                "connect-src": ["'self'", "https://api.cloudinary.com", "https://*.razorpay.com", "https://luna.razorpay.com"],
+                "frame-src": ["'self'", "https://*.razorpay.com", "https://checkout.razorpay.com", "https://accounts.google.com"],
                 "font-src": ["'self'", "https://fonts.gstatic.com"]
             },
         },
@@ -83,9 +83,8 @@ app.use(
         crossOriginResourcePolicy: { policy: "cross-origin" },
     })
 );
-app.use(express.json({ limit: "16kb" }));
-app.use(express.urlencoded({ extended: true, limit: "16kb" }));
-app.use(express.static("public"));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(cookieParser());
 app.use(morgan("dev"));
 
@@ -166,6 +165,9 @@ if (config.NODE_ENV === "production") {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
+    // Log the error for debugging on Render
+    console.error(`[App Error] ${req.method} ${req.url}:`, err);
+
     const response = {
         success: false,
         message: err.message || "Internal Server Error",
