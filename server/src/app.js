@@ -73,6 +73,7 @@ app.use(
                 "script-src": ["'self'", "'unsafe-inline'", "https://*.razorpay.com", "https://checkout.razorpay.com", "https://accounts.google.com"],
                 "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
                 "img-src": ["'self'", "data:", "blob:", "https:"],
+                "media-src": ["'self'", "data:", "blob:", "https:"],
                 "connect-src": ["'self'", "blob:", "https:", "wss:", "https://api.cloudinary.com", "https://*.razorpay.com"],
                 "frame-src": ["'self'", "https://*.razorpay.com", "https://checkout.razorpay.com", "https://accounts.google.com"],
                 "font-src": ["'self'", "https://fonts.gstatic.com"]
