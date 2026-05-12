@@ -10,12 +10,21 @@ import { initSocketSubscriber } from "./subscribers/socket.subscriber.js";
 import { initAuditSubscriber } from "./subscribers/audit.subscriber.js";
 import { initRecyclingSubscriber } from "./subscribers/recycling.subscriber.js";
 import { initRuleSubscriber } from "./subscribers/rule.subscriber.js";
+import fs from "fs";
+import path from "path";
 
 /**
  * Production Startup Sequence
  */
 const startServer = async () => {
     try {
+        // 0. Ensure Temp Directory Exists (Required for Multer)
+        const tempDir = path.join(process.cwd(), "public", "temp");
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+            logger.info("Created missing temp directory: public/temp");
+        }
+
         // 1. Initialize Early Subscribers (No DB needed)
         initLoggingSubscriber();
         initAuditSubscriber();
