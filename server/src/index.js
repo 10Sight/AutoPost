@@ -1,39 +1,48 @@
 import { config } from "./config/env.config.js";
-console.log("[Index] Importing connectDB...");
-import connectDB from "./db/index.db.js";
-console.log("[Index] Importing app...");
-import { app } from "./app.js";
-console.log("[Index] Importing logger...");
-import { logger } from "./utils/logger.js";
-console.log("[Index] Importing other modules...");
-import { initScheduler } from "./jobs/scheduler.job.js";
-import { initLoggingSubscriber } from "./subscribers/logging.subscriber.js";
-import { initSocketSubscriber } from "./subscribers/socket.subscriber.js";
-import { initAuditSubscriber } from "./subscribers/audit.subscriber.js";
-import { initRecyclingSubscriber } from "./subscribers/recycling.subscriber.js";
-import { initRuleSubscriber } from "./subscribers/rule.subscriber.js";
-console.log("[Index] All modules imported successfully!");
 
-initLoggingSubscriber();
-initAuditSubscriber();
-initRecyclingSubscriber();
-initRuleSubscriber();
+async function startServer() {
+    try {
+        console.log("[Bootstrap] Starting initialization sequence...");
 
-connectDB()
-    .then(() => {
+        console.log("[Bootstrap] Loading Database Module...");
+        const { default: connectDB } = await import("./db/index.db.js");
+
+        console.log("[Bootstrap] Loading Express Application Module...");
+        const { app } = await import("./app.js");
+
+        console.log("[Bootstrap] Loading Logger Module...");
+        const { logger } = await import("./utils/logger.js");
+
+        console.log("[Bootstrap] Loading Scheduler & Subscribers...");
+        const { initScheduler } = await import("./jobs/scheduler.job.js");
+        const { initLoggingSubscriber } = await import("./subscribers/logging.subscriber.js");
+        const { initSocketSubscriber } = await import("./subscribers/socket.subscriber.js");
+        const { initAuditSubscriber } = await import("./subscribers/audit.subscriber.js");
+        const { initRecyclingSubscriber } = await import("./subscribers/recycling.subscriber.js");
+        const { initRuleSubscriber } = await import("./subscribers/rule.subscriber.js");
+
+        console.log("[Bootstrap] Initializing Subscribers...");
+        initLoggingSubscriber();
+        initAuditSubscriber();
+        initRecyclingSubscriber();
+        initRuleSubscriber();
+
+        console.log("[Bootstrap] Connecting to Database...");
+        await connectDB();
+
+        console.log("[Bootstrap] Starting HTTP Server...");
         app.on("error", (error) => {
-            logger.error("ERROR: ", error);
+            logger.error("SERVER ERROR: ", error);
             throw error;
         });
 
         const server = app.listen(config.PORT, () => {
-            logger.info(
-                `http://localhost:${config.PORT}`
-            );
+            logger.info(`Server running in ${config.NODE_ENV} mode on port ${config.PORT}`);
             initScheduler();
             initSocketSubscriber(server);
         });
 
+        // Error Handlers
         const exitHandler = () => {
             if (server) {
                 server.close(() => {
@@ -46,7 +55,7 @@ connectDB()
         };
 
         const unexpectedErrorHandler = (error) => {
-            logger.error(error);
+            logger.error("UNEXPECTED ERROR:", error);
             exitHandler();
         };
 
@@ -62,7 +71,12 @@ connectDB()
                 });
             }
         });
-    })
-    .catch((err) => {
-        logger.error("MONGO db connection failed !!! ", err);
-    });
+
+    } catch (error) {
+        console.error("\nFATAL BOOTSTRAP ERROR:");
+        console.error(error);
+        process.exit(1);
+    }
+}
+
+startServer();
