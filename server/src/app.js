@@ -144,7 +144,7 @@ if (config.NODE_ENV === "production") {
             etag: true
         }));
 
-        app.get("(.*)", (req, res) => {
+        app.get("*", (req, res) => {
             if (!req.path.startsWith("/api/") && !req.path.includes(".")) {
                 res.sendFile(path.join(buildPath, "index.html"));
             } else if (!req.path.startsWith("/api/")) {
