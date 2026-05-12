@@ -49,7 +49,7 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use(limiter);
+// app.use(limiter);
 
 app.use(
     cors({
@@ -58,7 +58,7 @@ app.use(
                 "http://localhost:5173",
                 "http://localhost:5174",
                 "http://localhost:3000",
-                "https://autopost-k0pd.onrender.com",
+                "https://auto-posting-app-145f.onrender.com",
                 config.CORS_ORIGIN
             ].filter(Boolean);
 
@@ -76,23 +76,23 @@ app.use(
 // Stripe Webhook (Raw body required for signature verification)
 app.post("/api/v1/stripe/webhook", express.raw({ type: "application/json" }), handleStripeWebhook);
 
-app.use(
-    helmet({
-        contentSecurityPolicy: {
-            directives: {
-                ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-                "script-src": ["'self'", "'unsafe-inline'", "https://*.razorpay.com", "https://checkout.razorpay.com", "https://accounts.google.com"],
-                "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
-                "img-src": ["'self'", "data:", "https://res.cloudinary.com", "https://*.googleusercontent.com"],
-                "connect-src": ["'self'", "https://api.cloudinary.com", "https://*.razorpay.com", "https://luna.razorpay.com", "https://lumberjack.razorpay.com"],
-                "frame-src": ["'self'", "https://*.razorpay.com", "https://checkout.razorpay.com", "https://accounts.google.com"],
-                "font-src": ["'self'", "https://fonts.gstatic.com"]
-            },
-        },
-        crossOriginEmbedderPolicy: false,
-        crossOriginResourcePolicy: { policy: "cross-origin" },
-    })
-);
+// app.use(
+//     helmet({
+//         contentSecurityPolicy: {
+//             directives: {
+//                 ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+//                 "script-src": ["'self'", "'unsafe-inline'", "https://*.razorpay.com", "https://checkout.razorpay.com", "https://accounts.google.com"],
+//                 "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
+//                 "img-src": ["'self'", "data:", "https://res.cloudinary.com", "https://*.googleusercontent.com"],
+//                 "connect-src": ["'self'", "https://api.cloudinary.com", "https://*.razorpay.com", "https://luna.razorpay.com", "https://lumberjack.razorpay.com"],
+//                 "frame-src": ["'self'", "https://*.razorpay.com", "https://checkout.razorpay.com", "https://accounts.google.com"],
+//                 "font-src": ["'self'", "https://fonts.gstatic.com"]
+//             },
+//         },
+//         crossOriginEmbedderPolicy: false,
+//         crossOriginResourcePolicy: { policy: "cross-origin" },
+//     })
+// );
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(cookieParser());
