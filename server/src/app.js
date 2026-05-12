@@ -1,4 +1,5 @@
 import express from "express";
+console.log("[App] Initializing Express Application...");
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";

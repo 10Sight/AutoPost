@@ -2,6 +2,18 @@ import winston from "winston";
 
 import { config } from "../config/env.config.js";
 
+const transports = [];
+
+if (config.NODE_ENV === "development") {
+    transports.push(
+        new winston.transports.File({
+            filename: "logs/error.log",
+            level: "error",
+        }),
+        new winston.transports.File({ filename: "logs/combined.log" })
+    );
+}
+
 const logger = winston.createLogger({
     level: config.NODE_ENV === "development" ? "debug" : "info",
     format: winston.format.combine(
@@ -13,13 +25,7 @@ const logger = winston.createLogger({
         winston.format.json()
     ),
     defaultMeta: { service: "auto-posting-service", env: config.NODE_ENV },
-    transports: [
-        new winston.transports.File({
-            filename: "logs/error.log",
-            level: "error",
-        }),
-        new winston.transports.File({ filename: "logs/combined.log" }),
-    ],
+    transports: transports,
 });
 
 // Always add console transport for Render/Production visibility
