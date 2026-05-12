@@ -68,8 +68,18 @@ app.post("/api/v1/stripe/webhook", express.raw({ type: "application/json" }), ha
 
 app.use(
     helmet({
-        crossOriginOpenerPolicy: { policy: "same-origin" },
-        crossOriginEmbedderPolicy: { policy: "require-corp" },
+        contentSecurityPolicy: {
+            directives: {
+                ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+                "script-src": ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://accounts.google.com"],
+                "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
+                "img-src": ["'self'", "data:", "https://res.cloudinary.com", "https://*.googleusercontent.com"],
+                "connect-src": ["'self'", "https://api.cloudinary.com", "https://luna.razorpay.com"],
+                "frame-src": ["'self'", "https://checkout.razorpay.com", "https://accounts.google.com"],
+                "font-src": ["'self'", "https://fonts.gstatic.com"]
+            },
+        },
+        crossOriginEmbedderPolicy: false,
         crossOriginResourcePolicy: { policy: "cross-origin" },
     })
 );
@@ -130,17 +140,27 @@ app.use("/api/v1/invitations", invitationRouter);
 // Serve Frontend in Production
 if (config.NODE_ENV === "production") {
     const buildPath = path.resolve(__dirname, "../../client/dist");
+    console.log(`[Static] Checking for build folder at: ${buildPath}`);
 
     if (fs.existsSync(buildPath)) {
-        app.use(express.static(buildPath));
+        console.log("[Static] Found build folder. Enabling static serving.");
+        app.use(express.static(buildPath, {
+            maxAge: '1d',
+            etag: true
+        }));
 
+        // Catch-all: Send index.html for any non-API, non-asset route
         app.get("(.*)", (req, res) => {
-            if (!req.path.startsWith("/api/")) {
+            // Only serve index.html for page requests, not for missing assets (files with dots)
+            if (!req.path.startsWith("/api/") && !req.path.includes(".")) {
                 res.sendFile(path.join(buildPath, "index.html"));
+            } else if (!req.path.startsWith("/api/")) {
+                // If it's a missing asset, don't send index.html, send 404
+                res.status(404).send("Asset Not Found");
             }
         });
     } else {
-        console.warn("[Production Warning] Client dist folder not found at:", buildPath);
+        console.warn("[Production Warning] Client dist folder NOT FOUND at:", buildPath);
     }
 }
 
