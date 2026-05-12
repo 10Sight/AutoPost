@@ -79,7 +79,8 @@ app.use(
                 "font-src": ["'self'", "https://fonts.gstatic.com"]
             },
         },
-        crossOriginEmbedderPolicy: false,
+        crossOriginOpenerPolicy: { policy: "same-origin" },
+        crossOriginEmbedderPolicy: { policy: "credentialless" }, // Use credentialless to allow cross-origin images/videos easily
         crossOriginResourcePolicy: { policy: "cross-origin" },
     })
 );
