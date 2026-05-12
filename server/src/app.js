@@ -1,5 +1,4 @@
 import express from "express";
-console.log("[App] Initializing Express Application...");
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
@@ -19,28 +18,24 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// ... existing code ...
-// (I will use replace_file_content to swap the whole file structure)
-
 // Rate Limiting
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
+    windowMs: 15 * 60 * 1000,
+    max: 100,
     standardHeaders: true,
     legacyHeaders: false,
     message: "Too many requests from this IP, please try again after 15 minutes",
 });
 
 const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 20, // limit each IP to 20 requests per windowMs
+    windowMs: 15 * 60 * 1000,
+    max: 20,
     standardHeaders: true,
     legacyHeaders: false,
     message: "Too many login attempts, please try again after 15 minutes",
 });
 
 app.use(morgan("dev"));
-
 app.use(limiter);
 
 app.use(
@@ -57,7 +52,6 @@ app.use(
             if (!origin || allowedOrigins.includes(origin)) {
                 callback(null, true);
             } else {
-                console.log("Blocked by CORS:", origin);
                 callback(new Error("Not allowed by CORS"));
             }
         },
@@ -85,6 +79,7 @@ app.use(
         crossOriginResourcePolicy: { policy: "cross-origin" },
     })
 );
+
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(cookieParser());
@@ -92,7 +87,7 @@ app.use(cookieParser());
 // Routes import
 import authRouter from "./routes/auth.routes.js";
 import billingRoutes from "./routes/billing.routes.js";
-import userRouter from "./routes/user.routes.js"; // Keep userRouter as it's used in declaration
+import userRouter from "./routes/user.routes.js";
 import scheduledPostRouter from "./routes/scheduledPost.routes.js";
 import socialAccountRouter from "./routes/socialAccount.routes.js";
 import mediaRouter from "./routes/media.routes.js";
@@ -106,7 +101,6 @@ import linkedinRouter from "./routes/linkedin.routes.js";
 import xRouter from "./routes/x.routes.js";
 import facebookRouter from "./routes/facebook.routes.js";
 import accountGroupRouter from "./routes/accountGroup.routes.js";
-
 import superadminRouter from "./routes/superadmin.routes.js";
 import engagementRouter from "./routes/engagement.routes.js";
 import invitationRouter from "./routes/invitation.routes.js";
@@ -115,7 +109,7 @@ import invitationRouter from "./routes/invitation.routes.js";
 app.use("/api/v1/auth", authLimiter, authRouter);
 
 // Apply tenant context to all other routes
-import { verifyJWT } from "./middlewares/auth.middleware.js"; // Importing to use here
+import { verifyJWT } from "./middlewares/auth.middleware.js";
 import { tenantMiddleware } from "./middlewares/tenant.middleware.js";
 
 app.use("/api/v1/superadmin", superadminRouter);
@@ -140,34 +134,28 @@ app.use("/api/v1/invitations", invitationRouter);
 // Serve Frontend in Production
 if (config.NODE_ENV === "production") {
     const buildPath = path.resolve(__dirname, "../../client/dist");
-    console.log(`[Static] Checking for build folder at: ${buildPath}`);
 
     if (fs.existsSync(buildPath)) {
-        console.log("[Static] Found build folder. Enabling static serving.");
         app.use(express.static(buildPath, {
             maxAge: '1d',
             etag: true
         }));
 
-        // Catch-all: Send index.html for any non-API, non-asset route
         app.get("(.*)", (req, res) => {
-            // Only serve index.html for page requests, not for missing assets (files with dots)
             if (!req.path.startsWith("/api/") && !req.path.includes(".")) {
                 res.sendFile(path.join(buildPath, "index.html"));
             } else if (!req.path.startsWith("/api/")) {
-                // If it's a missing asset, don't send index.html, send 404
                 res.status(404).send("Asset Not Found");
             }
         });
-    } else {
-        console.warn("[Production Warning] Client dist folder NOT FOUND at:", buildPath);
     }
 }
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    // Log the error for debugging on Render
-    console.error(`[App Error] ${req.method} ${req.url}:`, err);
+    if (config.NODE_ENV === "development") {
+        console.error(`[App Error] ${req.method} ${req.url}:`, err);
+    }
 
     const response = {
         success: false,
