@@ -70,7 +70,7 @@ app.use(
         contentSecurityPolicy: {
             directives: {
                 ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-                "script-src": ["'self'", "'unsafe-inline'", "blob:", "https://*.razorpay.com", "https://checkout.razorpay.com", "https://accounts.google.com"],
+                "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'", "'wasm-unsafe-eval'", "blob:", "https://*.razorpay.com", "https://checkout.razorpay.com", "https://accounts.google.com"],
                 "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
                 "img-src": ["'self'", "data:", "blob:", "https:"],
                 "media-src": ["'self'", "data:", "blob:", "https:"],
