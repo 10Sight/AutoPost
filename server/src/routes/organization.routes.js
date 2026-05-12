@@ -5,11 +5,8 @@ import { tenantMiddleware } from "../middlewares/tenant.middleware.js";
 
 const router = Router();
 
-// Public branding route (No JWT required, tenant context optional)
-router.get("/public", (req, res, next) => {
-    // We call it but don't throw an error if it fails
-    tenantMiddleware(req, res, () => next()).catch(() => next());
-}, getPublicBranding);
+// Public branding route (No JWT required)
+router.get("/public", getPublicBranding);
 
 // Protected routes (JWT required)
 router.use(verifyJWT);

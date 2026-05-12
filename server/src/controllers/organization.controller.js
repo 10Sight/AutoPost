@@ -40,8 +40,13 @@ const updateOrganizationBranding = asyncHandler(async (req, res) => {
 });
 
 const getPublicBranding = asyncHandler(async (req, res) => {
-    // req.organization is populated by tenantMiddleware (optional here)
-    const organization = req.organization;
+    // Manually resolve organization since we removed tenantMiddleware from this public route
+    let organization = null;
+    const slug = req.headers["x-tenant-slug"] || req.query.tenantSlug;
+    
+    if (slug) {
+        organization = await Organization.findOne({ slug });
+    }
 
     // If no specific organization context, return default app branding
     if (!organization) {
