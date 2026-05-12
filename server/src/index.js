@@ -73,8 +73,9 @@ async function startServer() {
         });
 
     } catch (error) {
-        console.error("\nFATAL BOOTSTRAP ERROR:");
-        console.error(error);
+        console.log("\nFATAL BOOTSTRAP ERROR:");
+        console.log(error);
+        if (error.stack) console.log(error.stack);
         process.exit(1);
     }
 }
