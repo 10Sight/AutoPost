@@ -143,7 +143,11 @@ if (config.NODE_ENV === "production") {
     if (fs.existsSync(buildPath)) {
         app.use(express.static(buildPath, {
             maxAge: '1d',
-            etag: true
+            etag: true,
+            setHeaders: (res, path) => {
+                res.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+                res.set("Cross-Origin-Embedder-Policy", "credentialless");
+            }
         }));
 
         app.get("*", (req, res) => {
