@@ -56,12 +56,14 @@ const requiredFields = [
     "CLOUDINARY_API_SECRET",
 ];
 
+console.log(`[Configuration] Validating required environment variables...`);
 requiredFields.forEach((field) => {
     if (!_config[field]) {
-        console.error(`\n❌ [CRITICAL ERROR] Missing Environment Variable: "${field}"`);
-        console.error(`Please add "${field}" to your Render Environment settings.\n`);
+        console.log(`\nFATAL ERROR: Environment variable "${field}" is missing!`);
+        console.log(`Current keys loaded: ${Object.keys(_config).filter(k => _config[k]).join(", ")}`);
         process.exit(1);
     }
 });
+console.log(`[Configuration] Validation successful!`);
 
 export const config = Object.freeze(_config);
