@@ -243,19 +243,19 @@ const MediaLibrary = () => {
     return (
         <div className="space-y-6 p-4 md:p-8 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Media Library</h1>
-                        <p className="text-muted-foreground mt-1 text-sm">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+                <div className="flex flex-col md:flex-row md:items-center gap-4 text-center md:text-left">
+                    <div className="flex-1">
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Media Library</h1>
+                        <p className="text-muted-foreground mt-1 text-xs md:text-sm">
                             Manage your creative assets in separate workspace folders.
                         </p>
                     </div>
 
                     {/* Group Filter Selector - Refined Premium Design */}
-                    <div className="flex items-center gap-2 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-md p-1.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60 shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/30 group/select sm:ml-4">
+                    <div className="flex items-center justify-center gap-2 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-md p-1.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60 shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/30 group/select md:ml-4 w-fit mx-auto md:mx-0">
                         <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-                            <SelectTrigger className="w-[180px] h-8 border-none bg-transparent text-xs font-semibold text-slate-600 dark:text-slate-400 focus:ring-0 transition-colors group-hover/select:text-primary">
+                            <SelectTrigger className="w-[160px] md:w-[180px] h-8 border-none bg-transparent text-xs font-semibold text-slate-600 dark:text-slate-400 focus:ring-0 transition-colors group-hover/select:text-primary">
                                 <div className="flex items-center">
                                     <Filter className="h-3.5 w-3.5 mr-2.5 text-primary/60 group-hover/select:text-primary transition-colors" />
                                     <SelectValue placeholder="Select Group" />
@@ -279,55 +279,58 @@ const MediaLibrary = () => {
                         </Select>
                     </div>
                 </div>
-                <MediaUploader 
-                    activeFolderId={activeFolderId} 
-                    selectedGroupId={selectedGroup !== "all" ? selectedGroup : undefined} 
-                />
+                <div className="w-full xl:w-auto flex justify-center xl:justify-end">
+                    <MediaUploader 
+                        activeFolderId={activeFolderId} 
+                        selectedGroupId={selectedGroup !== "all" ? selectedGroup : undefined} 
+                    />
+                </div>
             </div>
 
             <div className="flex flex-col lg:flex-row gap-8">
-                {/* Left Sidebar - Folders */}
+                {/* Folders Navigation */}
                 <div className="w-full lg:w-64 shrink-0 space-y-4">
                     <div className="flex items-center justify-between px-2">
-                        <h2 className="text-sm font-semibold tracking-tight text-gray-500 uppercase">Folders</h2>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsCreateFolderOpen(true)}>
+                        <h2 className="text-[10px] md:text-sm font-black tracking-widest text-gray-500 uppercase">Folders</h2>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8" onClick={() => setIsCreateFolderOpen(true)}>
                             <FolderPlus className="h-4 w-4" />
                         </Button>
                     </div>
 
-                    <ScrollArea className="h-[400px] lg:h-[calc(100vh-250px)] pr-4">
-                        <div className="space-y-1">
+                    {/* Mobile: Horizontal Strip, Desktop: Vertical List */}
+                    <div className="w-full">
+                        <div className="flex lg:flex-col gap-2 pb-3 lg:pb-0 overflow-x-auto lg:overflow-x-visible flex-nowrap lg:flex-wrap no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
                             {/* Generic All Media */}
                             <button
                                 onClick={() => setActiveFolderId(null)}
-                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all shrink-0 lg:w-full border ${
                                     activeFolderId === null
-                                    ? "bg-primary text-white shadow-md shadow-primary/20"
-                                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                    ? "bg-primary text-white shadow-lg shadow-primary/20 border-transparent"
+                                    : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
                                 }`}
                             >
                                 <Library className="h-4 w-4" />
-                                All Media
+                                <span className="whitespace-nowrap">All Assets</span>
                             </button>
 
                             {isLoadingFolders ? (
-                                <div className="flex justify-center p-4"><Loader2 className="h-4 w-4 animate-spin text-gray-400"/></div>
+                                <div className="flex items-center justify-center p-4 shrink-0"><Loader2 className="h-4 w-4 animate-spin text-gray-400"/></div>
                             ) : (
                                 foldersData?.data?.map((folder) => (
                                     <div 
                                         key={folder._id} 
-                                        className={`group flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm transition-all ${
+                                        className={`group flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl text-sm transition-all shrink-0 lg:w-full border ${
                                             activeFolderId === folder._id
-                                            ? "bg-primary text-white shadow-md shadow-primary/20 font-medium"
-                                            : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-medium"
+                                            ? "bg-primary text-white shadow-lg shadow-primary/20 font-bold border-transparent"
+                                            : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium"
                                         }`}
                                     >
                                         <button
                                             onClick={() => setActiveFolderId(folder._id)}
-                                            className="flex items-center gap-3 flex-1 h-full text-left"
+                                            className="flex items-center gap-3 flex-1 text-left"
                                         >
                                             {activeFolderId === folder._id ? <FolderOpen className="h-4 w-4" /> : <Folder className="h-4 w-4" />}
-                                            <span className="truncate max-w-[120px]">{folder.name}</span>
+                                            <span className="truncate max-w-[200px] lg:max-w-[120px] whitespace-nowrap">{folder.name}</span>
                                         </button>
 
                                         <DropdownMenu>
@@ -335,16 +338,16 @@ const MediaLibrary = () => {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className={`h-6 w-6 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity ${
+                                                    className={`h-6 w-6 lg:opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity ${
                                                         activeFolderId === folder._id ? "text-white hover:bg-white/20 hover:text-white" : ""
                                                     }`}
                                                 >
                                                     <Trash2 className="h-3 w-3" />
                                                 </Button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
+                                            <DropdownMenuContent align="end" className="rounded-xl">
                                                 <DropdownMenuItem 
-                                                    className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
+                                                    className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20 rounded-lg mx-1"
                                                     onClick={() => handleDeleteFolder(folder._id)}
                                                 >
                                                     <Trash2 className="h-4 w-4 mr-2" /> Delete Folder
@@ -355,27 +358,27 @@ const MediaLibrary = () => {
                                 ))
                             )}
                         </div>
-                    </ScrollArea>
+                    </div>
                 </div>
 
                 {/* Right Area - Media Grid */}
                 <div className="flex-1 space-y-4">
 
                     {/* Filters and Search */}
-                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between sticky top-0 z-10 bg-background/80 backdrop-blur-md py-4 border-b border-border/40 mt-2 mb-6">
-                        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
-                            <TabsList className="bg-muted p-1 rounded-lg">
-                                <TabsTrigger value="all" className="px-6 rounded-md">All Media</TabsTrigger>
-                                <TabsTrigger value="images" className="px-6 rounded-md">Images</TabsTrigger>
-                                <TabsTrigger value="videos" className="px-6 rounded-md">Videos</TabsTrigger>
+                    <div className="flex flex-col lg:flex-row gap-4 items-center justify-between sticky top-0 z-10 bg-background/80 backdrop-blur-md py-4 border-b border-border/40 mt-2 mb-6">
+                        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full lg:w-auto">
+                            <TabsList className="bg-muted p-1 rounded-xl w-full flex justify-between sm:justify-start">
+                                <TabsTrigger value="all" className="flex-1 sm:flex-none sm:px-8 rounded-lg text-xs md:text-sm font-bold">All</TabsTrigger>
+                                <TabsTrigger value="images" className="flex-1 sm:flex-none sm:px-8 rounded-lg text-xs md:text-sm font-bold">Images</TabsTrigger>
+                                <TabsTrigger value="videos" className="flex-1 sm:flex-none sm:px-8 rounded-lg text-xs md:text-sm font-bold">Videos</TabsTrigger>
                             </TabsList>
                         </Tabs>
 
-                        <div className="relative w-full sm:w-72">
+                        <div className="relative w-full lg:w-72">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <Input
                                 placeholder="Search media..."
-                                className="pl-9 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                                className="pl-9 h-10 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />

@@ -3,31 +3,35 @@ import { Youtube, Globe } from "lucide-react";
 
 export const MobileMockup = ({ children, platform }) => {
     return (
-        <div className="relative mx-auto border-gray-800 dark:border-gray-800 bg-gray-900 border-[14px] rounded-[2.5rem] h-[680px] w-[310px] shadow-xl ring-1 ring-gray-900/5 transition-all duration-500">
-            {/* Notch Area */}
-            <div className="w-[148px] h-[18px] bg-gray-800 top-0 rounded-b-[1rem] left-1/2 -translate-x-1/2 absolute z-30"></div>
-            
-            {/* Status Bar Mock */}
-            <div className="absolute top-[10px] left-0 right-0 px-6 flex justify-between items-center z-20 text-[10px] font-bold dark:text-white pointer-events-none">
-                <span>9:41</span>
-                <div className="flex gap-1 items-center">
-                    <div className="w-3 h-2 border border-current rounded-[2px]" />
-                    <div className="w-2.5 h-2.5 bg-current rounded-full opacity-80" />
+        <div className="flex justify-center items-start w-full overflow-hidden py-4">
+            <div className="relative border-gray-800 dark:border-gray-800 bg-gray-900 border-[8px] sm:border-[14px] rounded-[2.5rem] h-[600px] sm:h-[680px] w-full max-w-[280px] sm:max-w-[310px] shadow-xl ring-1 ring-gray-900/5 transition-all duration-500 origin-top scale-[0.9] xs:scale-100">
+                {/* Notch Area */}
+                <div className="w-[100px] sm:w-[148px] h-[14px] sm:h-[18px] bg-gray-800 top-0 rounded-b-[1rem] left-1/2 -translate-x-1/2 absolute z-30"></div>
+                
+                {/* Status Bar Mock */}
+                <div className="absolute top-[8px] sm:top-[10px] left-0 right-0 px-4 sm:px-6 flex justify-between items-center z-20 text-[9px] sm:text-[10px] font-bold dark:text-white pointer-events-none">
+                    <span>9:41</span>
+                    <div className="flex gap-1 items-center">
+                        <div className="w-2.5 h-1.5 sm:w-3 sm:h-2 border border-current rounded-[2px]" />
+                        <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-current rounded-full opacity-80" />
+                    </div>
                 </div>
-            </div>
 
-            {/* Physical Buttons */}
-            <div className="h-[32px] w-[3px] bg-gray-800 absolute -start-[17px] top-[72px] rounded-s-lg"></div>
-            <div className="h-[46px] w-[3px] bg-gray-800 absolute -start-[17px] top-[124px] rounded-s-lg"></div>
-            <div className="h-[46px] w-[3px] bg-gray-800 absolute -start-[17px] top-[178px] rounded-s-lg"></div>
-            <div className="h-[64px] w-[3px] bg-gray-800 absolute -end-[17px] top-[142px] rounded-e-lg"></div>
+                {/* Physical Buttons - Hidden on smallest screens to save space */}
+                <div className="hidden sm:block h-[32px] w-[3px] bg-gray-800 absolute -start-[17px] top-[72px] rounded-s-lg"></div>
+                <div className="hidden sm:block h-[46px] w-[3px] bg-gray-800 absolute -start-[17px] top-[124px] rounded-s-lg"></div>
+                <div className="hidden sm:block h-[46px] w-[3px] bg-gray-800 absolute -start-[17px] top-[178px] rounded-s-lg"></div>
+                <div className="hidden sm:block h-[64px] w-[3px] bg-gray-800 absolute -end-[17px] top-[142px] rounded-e-lg"></div>
 
-            {/* Screen Content */}
-            <div className="rounded-[2.2rem] overflow-hidden w-full h-full bg-white dark:bg-gray-950 flex flex-col relative pt-[30px] pb-[10px]">
-                {children}
+                {/* Screen Content */}
+                <div className="rounded-[2rem] sm:rounded-[2.2rem] overflow-hidden w-full h-full bg-white dark:bg-gray-950 flex flex-col relative pt-[25px] sm:pt-[30px] pb-[10px]">
+                    <div className="flex-1 overflow-y-auto no-scrollbar">
+                        {children}
+                    </div>
 
-                {/* Home Indicator */}
-                <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-24 h-1 bg-gray-200 dark:bg-gray-800 rounded-full z-20"></div>
+                    {/* Home Indicator */}
+                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-20 sm:w-24 h-1 bg-gray-200 dark:bg-gray-800 rounded-full z-20"></div>
+                </div>
             </div>
         </div>
     );

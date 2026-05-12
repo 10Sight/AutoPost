@@ -220,34 +220,34 @@ const Scheduler = () => {
     return (
         <div className="space-y-6 p-4 md:p-8 max-w-[1600px] mx-auto transition-opacity duration-300" style={{ opacity: isFetching ? 0.7 : 1 }}>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Scheduler</h1>
-                    <p className="text-muted-foreground mt-1">Manage all your scheduled and published content</p>
+                <div className="space-y-1">
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Scheduler</h1>
+                    <p className="text-xs md:text-sm text-muted-foreground">Manage all your scheduled and published content</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 md:gap-3">
                     <Button
                         variant="outline"
                         onClick={() => navigate('/dashboard/scheduler/bulk')}
-                        className="hidden sm:flex h-10 border-gray-200 dark:border-gray-800 rounded-xl"
+                        className="hidden md:flex h-9 md:h-10 border-gray-200 dark:border-gray-800 rounded-xl"
                     >
                         <Upload className="mr-2 h-4 w-4" />
                         Bulk Upload
                     </Button>
-                    <Button onClick={() => navigate('/dashboard/create')} className="h-10 rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all font-bold">
+                    <Button onClick={() => navigate('/dashboard/create')} className="flex-1 sm:flex-none h-9 md:h-10 rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all font-bold text-xs md:text-sm">
                         <Plus className="mr-2 h-4 w-4" />
                         Create Post
                     </Button>
                 </div>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-4 lg:items-center justify-between bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm p-3 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+            <div className="flex flex-col xl:flex-row gap-3 md:gap-4 xl:items-center justify-between bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm p-3 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
                 <div className="flex flex-col md:flex-row gap-3 md:items-center flex-1">
                     {/* Search Bar */}
-                    <div className="relative flex-1 max-w-md">
+                    <div className="relative flex-1 w-full md:max-w-md">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
                             placeholder="Search captions..."
-                            className="pl-9 h-9 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 rounded-xl focus-visible:ring-primary/20 transition-all text-sm"
+                            className="pl-9 h-9 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 rounded-xl focus-visible:ring-primary/20 transition-all text-xs md:text-sm"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -261,97 +261,101 @@ const Scheduler = () => {
                         )}
                     </div>
 
-                    {/* Group/Account Filter - Refined Premium Design */}
-                    <div className="flex items-center gap-2 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-md p-1.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60 shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/30 group/select">
-                        <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-                            <SelectTrigger className="w-[150px] h-7 border-none bg-transparent text-xs font-semibold text-slate-600 dark:text-slate-400 focus:ring-0 transition-colors group-hover/select:text-primary">
-                                <div className="flex items-center">
-                                    <Filter className="h-3 w-3 mr-2 text-primary/60 group-hover/select:text-primary transition-colors" />
-                                    <SelectValue placeholder="Select Group" />
-                                </div>
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-                                <SelectItem value="all" className="text-xs font-semibold text-slate-500 hover:text-primary transition-colors cursor-pointer rounded-lg mx-1">
-                                    Global View
-                                </SelectItem>
-                                <div className="h-px bg-slate-100 dark:bg-slate-800 my-1 mx-2" />
-                                {groupsData?.data?.map((group) => (
-                                    <SelectItem 
-                                        key={group._id} 
-                                        value={group._id} 
-                                        className="text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-primary transition-colors cursor-pointer rounded-lg mx-1"
-                                    >
-                                        {group.name}
+                    <div className="flex flex-wrap items-center gap-3">
+                        {/* Group/Account Filter */}
+                        <div className="flex items-center gap-2 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-md p-1.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60 shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/30 group/select">
+                            <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+                                <SelectTrigger className="w-[130px] md:w-[150px] h-7 border-none bg-transparent text-[10px] md:text-xs font-semibold text-slate-600 dark:text-slate-400 focus:ring-0 transition-colors group-hover/select:text-primary">
+                                    <div className="flex items-center">
+                                        <Filter className="h-3 w-3 mr-2 text-primary/60 group-hover/select:text-primary transition-colors" />
+                                        <SelectValue placeholder="Group" />
+                                    </div>
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                                    <SelectItem value="all" className="text-xs font-semibold text-slate-500 hover:text-primary transition-colors cursor-pointer rounded-lg mx-1">
+                                        Global View
                                     </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    {/* Platform Selector */}
-                    <div className="flex items-center gap-1 bg-white dark:bg-gray-950 p-1 rounded-xl border border-gray-200 dark:border-gray-800">
-                        <TooltipProvider>
-                            <div className="flex items-center">
-                                <button
-                                    onClick={() => { setSelectedPlatform("all"); setPage(1); }}
-                                    className={`px-3 py-1 text-[10px] uppercase font-black tracking-widest rounded-lg transition-all ${selectedPlatform === "all"
-                                            ? "bg-primary text-white shadow-sm"
-                                            : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                                        }`}
-                                >
-                                    All
-                                </button>
-                                <div className="w-[1px] h-3 bg-gray-200 dark:bg-gray-800 mx-1.5" />
-                                <div className="flex items-center gap-0.5">
-                                    {['facebook', 'instagram', 'linkedin', 'youtube', 'x'].map((plt) => (
-                                        <Tooltip key={plt}>
-                                            <TooltipTrigger asChild>
-                                                <button
-                                                    onClick={() => { setSelectedPlatform(plt); setPage(1); }}
-                                                    className={`p-1.5 rounded-lg transition-all ${selectedPlatform === plt
-                                                            ? "bg-gray-100 dark:bg-gray-800 scale-110 shadow-inner"
-                                                            : "grayscale opacity-30 hover:grayscale-0 hover:opacity-100 hover:bg-gray-50 dark:hover:bg-gray-800"
-                                                        }`}
-                                                >
-                                                    <PlatformIcon platform={plt} className="h-3.5 w-3.5" />
-                                                </button>
-                                            </TooltipTrigger>
-                                            <TooltipContent className="bg-gray-900 text-white text-[9px] font-bold uppercase py-1">
-                                                {plt}
-                                            </TooltipContent>
-                                        </Tooltip>
+                                    <div className="h-px bg-slate-100 dark:bg-slate-800 my-1 mx-2" />
+                                    {groupsData?.data?.map((group) => (
+                                        <SelectItem 
+                                            key={group._id} 
+                                            value={group._id} 
+                                            className="text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-primary transition-colors cursor-pointer rounded-lg mx-1"
+                                        >
+                                            {group.name}
+                                        </SelectItem>
                                     ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Platform Selector */}
+                        <div className="flex items-center gap-1 bg-white dark:bg-gray-950 p-1 rounded-xl border border-gray-200 dark:border-gray-800 overflow-x-auto no-scrollbar max-w-[200px] sm:max-w-none">
+                            <TooltipProvider>
+                                <div className="flex items-center shrink-0">
+                                    <button
+                                        onClick={() => { setSelectedPlatform("all"); setPage(1); }}
+                                        className={`px-3 py-1 text-[10px] uppercase font-black tracking-widest rounded-lg transition-all ${selectedPlatform === "all"
+                                                ? "bg-primary text-white shadow-sm"
+                                                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                            }`}
+                                    >
+                                        All
+                                    </button>
+                                    <div className="w-[1px] h-3 bg-gray-200 dark:bg-gray-800 mx-1.5" />
+                                    <div className="flex items-center gap-0.5">
+                                        {['facebook', 'instagram', 'linkedin', 'youtube', 'x'].map((plt) => (
+                                            <Tooltip key={plt}>
+                                                <TooltipTrigger asChild>
+                                                    <button
+                                                        onClick={() => { setSelectedPlatform(plt); setPage(1); }}
+                                                        className={`p-1.5 rounded-lg transition-all ${selectedPlatform === plt
+                                                                ? "bg-gray-100 dark:bg-gray-800 scale-110 shadow-inner"
+                                                                : "grayscale opacity-30 hover:grayscale-0 hover:opacity-100 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                                            }`}
+                                                    >
+                                                        <PlatformIcon platform={plt} className="h-3.5 w-3.5" />
+                                                    </button>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="bg-gray-900 text-white text-[9px] font-bold uppercase py-1">
+                                                    {plt}
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        </TooltipProvider>
+                            </TooltipProvider>
+                        </div>
                     </div>
                 </div>
 
-                {/* View Mode Switcher Integrates Here */}
-                <div className="flex items-center gap-1 bg-white dark:bg-gray-950 p-1 rounded-xl border border-gray-200 dark:border-gray-800">
-                    <button
-                        className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-primary text-white shadow-md' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-                        onClick={() => setViewMode('list')}
-                    >
-                        <LayoutList className="h-4 w-4" />
-                    </button>
-                    <button
-                        className={`p-1.5 rounded-lg transition-all ${viewMode === 'calendar' ? 'bg-primary text-white shadow-md' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-                        onClick={() => setViewMode('calendar')}
-                    >
-                        <CalendarIcon className="h-4 w-4" />
-                    </button>
+                {/* View Mode Switcher */}
+                <div className="flex items-center justify-between sm:justify-end gap-3 mt-2 md:mt-0">
+                    <div className="flex items-center gap-1 bg-white dark:bg-gray-950 p-1 rounded-xl border border-gray-200 dark:border-gray-800">
+                        <button
+                            className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-primary text-white shadow-md' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                            onClick={() => setViewMode('list')}
+                        >
+                            <LayoutList className="h-4 w-4" />
+                        </button>
+                        <button
+                            className={`p-1.5 rounded-lg transition-all ${viewMode === 'calendar' ? 'bg-primary text-white shadow-md' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                            onClick={() => setViewMode('calendar')}
+                        >
+                            <CalendarIcon className="h-4 w-4" />
+                        </button>
+                    </div>
                 </div>
             </div>
 
 
             <Tabs defaultValue="all" value={activeTab} onValueChange={handleTabChange} className="w-full">
-                <div className="flex items-center justify-between mb-6">
-                    <TabsList className="bg-gray-100/50 dark:bg-gray-800/50 p-1 rounded-xl h-12">
-                        <TabsTrigger value="all" className="rounded-lg px-6 h-10 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">All Posts</TabsTrigger>
-                        <TabsTrigger value="scheduled" className="rounded-lg px-6 h-10 data-[state=active]:bg-white data-[state=active]:text-yellow-600 data-[state=active]:shadow-sm transition-all">Scheduled</TabsTrigger>
-                        <TabsTrigger value="posted" className="rounded-lg px-6 h-10 data-[state=active]:bg-white data-[state=active]:text-green-600 data-[state=active]:shadow-sm transition-all">Published</TabsTrigger>
-                        <TabsTrigger value="failed" className="rounded-lg px-6 h-10 data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm transition-all">Failed</TabsTrigger>
+                <div className="flex items-center justify-between mb-6 overflow-x-auto no-scrollbar">
+                    <TabsList className="bg-gray-100/50 dark:bg-gray-800/50 p-1 rounded-xl h-11 md:h-12 w-fit shrink-0">
+                        <TabsTrigger value="all" className="rounded-lg px-4 md:px-6 h-9 md:h-10 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all text-xs md:text-sm">All Posts</TabsTrigger>
+                        <TabsTrigger value="scheduled" className="rounded-lg px-4 md:px-6 h-9 md:h-10 data-[state=active]:bg-white data-[state=active]:text-yellow-600 data-[state=active]:shadow-sm transition-all text-xs md:text-sm">Scheduled</TabsTrigger>
+                        <TabsTrigger value="posted" className="rounded-lg px-4 md:px-6 h-9 md:h-10 data-[state=active]:bg-white data-[state=active]:text-green-600 data-[state=active]:shadow-sm transition-all text-xs md:text-sm">Published</TabsTrigger>
+                        <TabsTrigger value="failed" className="rounded-lg px-4 md:px-6 h-9 md:h-10 data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm transition-all text-xs md:text-sm">Failed</TabsTrigger>
                     </TabsList>
                 </div>
 

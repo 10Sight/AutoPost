@@ -125,21 +125,21 @@ const AccountCard = ({ account, groups, onDisconnect, onAssign }) => {
                     </div>
                 </div>
 
-                <div className="mt-6 flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                    <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center text-xs font-bold ring-2 ring-white dark:ring-gray-900 shadow-sm border border-gray-100 overflow-hidden text-center">
+                <div className="mt-6 flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
+                    <div className="flex items-center gap-3 w-full overflow-hidden">
+                        <div className="h-10 w-10 shrink-0 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center text-xs font-bold ring-2 ring-white dark:ring-gray-900 shadow-sm border border-gray-100 overflow-hidden text-center">
                             <img
                                 src={account.metadata?.thumbnail || `https://ui-avatars.com/api/?name=${encodeURIComponent(account.platformUserName || account.platform)}&background=random&color=fff`}
                                 alt="Avatar"
                                 className="h-full w-full object-cover"
                             />
                         </div>
-                        <div className="flex flex-col">
-                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[120px]">
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
                                 {account.platformUserName || "Linked Account"}
                             </span>
-                            <span className="text-[10px] text-gray-500">
-                                ID: {account.platformUserId ? `${account.platformUserId.substring(0, 8)}...` : 'Unknown'}
+                            <span className="text-[10px] text-gray-500 font-mono opacity-70 truncate">
+                                {account.platformUserId || 'ID: Unknown'}
                             </span>
                         </div>
                     </div>
@@ -424,7 +424,7 @@ const Settings = () => {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-center gap-3">
                     <Button 
                         variant="outline" 
                         onClick={() => {
@@ -432,7 +432,7 @@ const Settings = () => {
                             setGroupFormData({ name: "", description: "" });
                             setIsGroupModalOpen(true);
                         }}
-                        className="hidden sm:flex"
+                        className="w-full sm:w-auto"
                     >
                         <FolderPlus className="mr-2 h-4 w-4 text-primary" />
                         New Group
@@ -440,7 +440,7 @@ const Settings = () => {
 
                 <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                     <DialogTrigger asChild>
-                        <Button className="shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
+                        <Button className="w-full sm:w-auto shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
                             <Plus className="mr-2 h-4 w-4" />
                             Connect Account
                         </Button>
@@ -563,10 +563,10 @@ const Settings = () => {
                         </form>
                     </DialogContent>
                 </Dialog>
+                </div>
             </div>
-        </div>
 
-        <div className="space-y-12">
+            <div className="space-y-12">
                 {(isAccountsLoading || isGroupsLoading) ? (
                     <div className="col-span-full flex h-64 items-center justify-center">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -595,12 +595,17 @@ const Settings = () => {
                         ))}
 
                         {/* 2. Render Ungrouped Accounts */}
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-3 border-b pb-4 border-gray-100 dark:border-gray-800">
-                                <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-500">
-                                    <Tag className="h-5 w-5" />
+                        <div className="space-y-6">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 border-b pb-4 border-gray-100 dark:border-gray-800">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-500">
+                                        <Tag className="h-5 w-5" />
+                                    </div>
+                                    <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-100">Ungrouped Accounts</h2>
                                 </div>
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Ungrouped Accounts</h2>
+                                <Badge variant="outline" className="w-fit text-[10px] font-black uppercase tracking-tighter opacity-50">
+                                    Needs Organization
+                                </Badge>
                             </div>
 
                             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -640,13 +645,13 @@ const Settings = () => {
                         {availablePages.map((acc) => (
                             <div
                                 key={acc.id}
-                                className="flex items-center justify-between p-4 border rounded-xl hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer border-gray-200 dark:border-gray-800 transition-colors group"
+                                className="flex items-center justify-between p-3 md:p-4 border rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer border-gray-200 dark:border-gray-800 transition-all group hover:shadow-md"
                                 onClick={() => handleAccountSelection(acc)}
                             >
-                                <div className="flex items-center gap-4">
-                                    <div className="h-12 w-12 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden border border-gray-100 dark:border-gray-800">
-                                        <div className="absolute top-0 right-0 p-1 bg-white dark:bg-gray-800 rounded-bl-lg">
-                                             <PlatformIcon platform={acc.platform} className="h-3 w-3" />
+                                <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+                                    <div className="h-10 w-10 md:h-12 md:w-12 shrink-0 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden border border-gray-100 dark:border-gray-800 relative">
+                                        <div className="absolute top-0 right-0 p-0.5 bg-white dark:bg-gray-800 rounded-bl-md shadow-sm z-10">
+                                             <PlatformIcon platform={acc.platform} className="h-2.5 w-2.5" />
                                         </div>
                                         <img
                                             src={acc.thumbnail || `https://ui-avatars.com/api/?name=${encodeURIComponent(acc.name || acc.username)}&background=random&color=fff`}
@@ -654,14 +659,14 @@ const Settings = () => {
                                             className="h-full w-full object-cover"
                                         />
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{acc.name || acc.username}</span>
-                                        <span className="text-xs text-gray-500 uppercase tracking-widest font-medium">
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="font-bold text-sm md:text-base text-gray-900 dark:text-gray-100 truncate">{acc.name || acc.username}</span>
+                                        <span className="text-[10px] text-gray-500 uppercase tracking-widest font-black opacity-60 truncate">
                                             {acc.isPage ? "Company Page" : "Personal Profile"}
                                         </span>
                                     </div>
                                 </div>
-                                <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity text-primary">
+                                <Button variant="ghost" size="sm" className="ml-2 h-8 px-3 text-xs md:opacity-0 group-hover:opacity-100 transition-opacity text-primary font-bold">
                                     Select
                                 </Button>
                             </div>

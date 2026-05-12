@@ -125,14 +125,14 @@ const TeamSettings = () => {
 
     return (
         <div className="flex-1 space-y-8 p-4 md:p-8 pt-6 max-w-[1600px] mx-auto">
-            <div className="flex items-center justify-between space-y-2">
-                <div>
-                    <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Team & Workspace</h2>
-                    <p className="text-muted-foreground">Manage your team members and their permissions.</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                <div className="text-center sm:text-left">
+                    <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Team & Workspace</h2>
+                    <p className="text-sm text-muted-foreground mt-1">Manage your team members and their permissions.</p>
                 </div>
                 <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
                     <DialogTrigger asChild>
-                        <Button className="shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
+                        <Button className="w-full sm:w-auto shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
                             <Plus className="mr-2 h-4 w-4" /> Add Member
                         </Button>
                     </DialogTrigger>
@@ -148,20 +148,20 @@ const TeamSettings = () => {
                                 <label htmlFor="email" className="text-sm font-medium">Email address</label>
                                 <Input id="email" name="email" placeholder="colleague@company.com" type="email" required />
                             </div>
-                            <div className="grid gap-2">
+                             <div className="grid gap-2">
                                 <label className="text-sm font-medium">Role</label>
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     {['user', 'creator', 'reviewer', 'publisher', 'admin'].map((role) => (
                                         <div
                                             key={role}
-                                            className={`border rounded-md p-3 cursor-pointer transition-all ${selectedRole === role
+                                            className={`border rounded-xl p-3 cursor-pointer transition-all ${selectedRole === role
                                                 ? 'border-primary bg-primary/5 ring-1 ring-primary'
                                                 : 'hover:bg-gray-50 dark:hover:bg-gray-800'
                                                 }`}
                                             onClick={() => setSelectedRole(role)}
                                         >
-                                            <div className="font-semibold text-sm capitalize">{role}</div>
-                                            <div className="text-xs text-muted-foreground">
+                                            <div className="font-bold text-sm capitalize">{role}</div>
+                                            <div className="text-[10px] text-muted-foreground mt-0.5">
                                                 {role === 'admin' && "Full access"}
                                                 {role === 'creator' && "Can create drafts"}
                                                 {role === 'reviewer' && "Can approve posts"}
@@ -192,20 +192,20 @@ const TeamSettings = () => {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 <Card className="col-span-2">
                     <Tabs defaultValue="members" className="w-full">
-                        <CardHeader className="pb-0">
-                            <div className="flex items-center justify-between">
+                        <CardHeader className="pb-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div>
-                                    <CardTitle className="flex items-center gap-2">
+                                    <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                                         <Users className="h-5 w-5 text-primary" />
                                         Team & Access
                                     </CardTitle>
-                                    <CardDescription>
+                                    <CardDescription className="text-xs">
                                         Manage people and pending invitations.
                                     </CardDescription>
                                 </div>
-                                <TabsList>
-                                    <TabsTrigger value="members">Active Members</TabsTrigger>
-                                    <TabsTrigger value="invites">Pending Invites</TabsTrigger>
+                                <TabsList className="grid grid-cols-2 w-full sm:w-auto h-10 p-1 bg-muted rounded-xl">
+                                    <TabsTrigger value="members" className="rounded-lg text-xs md:text-sm font-bold">Members</TabsTrigger>
+                                    <TabsTrigger value="invites" className="rounded-lg text-xs md:text-sm font-bold">Invites</TabsTrigger>
                                 </TabsList>
                             </div>
                         </CardHeader>
@@ -217,38 +217,38 @@ const TeamSettings = () => {
                                     <div className="text-center py-8 text-destructive">Failed to load team members.</div>
                                 ) : (
                                     members.map((member) => (
-                                        <div key={member._id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                                            <div className="flex items-center space-x-4">
-                                                <Avatar className="h-10 w-10">
+                                        <div key={member._id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4">
+                                            <div className="flex items-center space-x-4 min-w-0">
+                                                <Avatar className="h-12 w-12 shrink-0 ring-2 ring-white dark:ring-gray-900 shadow-sm">
                                                     <AvatarImage src={`https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=random`} />
-                                                    <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                                                    <AvatarFallback className="font-bold">{member.name.charAt(0)}</AvatarFallback>
                                                 </Avatar>
-                                                <div>
-                                                    <p className="text-sm font-medium leading-none">{member.name}</p>
-                                                    <p className="text-sm text-muted-foreground">{member.email}</p>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{member.name}</p>
+                                                    <p className="text-xs text-muted-foreground truncate">{member.email}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center space-x-4">
-                                                <div className="flex items-center gap-2">
-                                                    <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                                        <CheckCircle2 className="w-3 h-3 mr-1" /> Active
+                                            <div className="flex items-center justify-between sm:justify-end space-x-4 w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-none border-gray-100 dark:border-gray-800">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-none font-bold text-[10px] h-5">
+                                                        <CheckCircle2 className="w-2.5 h-2.5 mr-1" /> ACTIVE
                                                     </Badge>
-                                                    <Badge variant="outline" className="capitalize">{member.role}</Badge>
+                                                    <Badge variant="outline" className="capitalize font-black text-[10px] h-5 tracking-tighter">{member.role}</Badge>
                                                 </div>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-gray-200 dark:hover:bg-gray-700">
                                                             <MoreHorizontal className="h-4 w-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
+                                                    <DropdownMenuContent align="end" className="rounded-xl">
                                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                        <DropdownMenuItem onClick={() => openEditRole(member)}>
+                                                        <DropdownMenuItem onClick={() => openEditRole(member)} className="rounded-lg mx-1">
                                                             Edit Role
                                                         </DropdownMenuItem>
                                                         {currentUser?._id !== member._id && (
                                                             <DropdownMenuItem 
-                                                                className="text-red-600"
+                                                                className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20 rounded-lg mx-1"
                                                                 onClick={() => openDeleteConfirm(member)}
                                                             >
                                                                 Remove Member
@@ -272,28 +272,28 @@ const TeamSettings = () => {
                                     </div>
                                 ) : (
                                     pendingInvites.map((invite) => (
-                                        <div key={invite._id} className="flex items-center justify-between p-3 rounded-xl border bg-card/50">
-                                            <div className="flex items-center space-x-4">
-                                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                        <div key={invite._id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border bg-card/50 gap-4">
+                                            <div className="flex items-center space-x-4 min-w-0">
+                                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                                                     <Mail className="h-5 w-5 text-primary" />
                                                 </div>
-                                                <div>
-                                                    <p className="text-sm font-medium leading-none">{invite.email}</p>
-                                                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{invite.email}</p>
+                                                    <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1 uppercase tracking-wider font-black">
                                                         <Clock className="h-3 w-3" /> Expires {new Date(invite.expiresAt).toLocaleDateString()}
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center space-x-4">
-                                                <Badge variant="outline" className="capitalize">{invite.role}</Badge>
+                                            <div className="flex items-center justify-between sm:justify-end space-x-4 w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-none border-gray-100 dark:border-gray-800">
+                                                <Badge variant="outline" className="capitalize font-black text-[10px] h-5 tracking-tighter">{invite.role}</Badge>
                                                 <Button 
                                                     variant="ghost" 
                                                     size="sm" 
-                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 font-bold text-xs h-8"
                                                     onClick={() => handleCancelInvite(invite._id)}
                                                     disabled={isCancelling}
                                                 >
-                                                    {isCancelling ? <Loader2 className="h-3 w-3 animate-spin" /> : "Cancel"}
+                                                    {isCancelling ? <Loader2 className="h-3 w-3 animate-spin" /> : "Cancel Invitation"}
                                                 </Button>
                                             </div>
                                         </div>

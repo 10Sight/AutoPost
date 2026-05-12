@@ -18,6 +18,12 @@ graph TD
         SocialSvc[Social Integration Services]
         MediaSvc[Media Asset Service]
         AdminSvc[SuperAdmin Service]
+        BillingSvc[Billing & Payment Service]
+    end
+
+    subgraph Gateways
+        Razorpay[Razorpay API]
+        Stripe[Stripe API]
     end
 
     subgraph Security
@@ -41,6 +47,11 @@ graph TD
     Tenant --> SocialSvc
     Tenant --> MediaSvc
     Tenant --> AdminSvc
+    Tenant --> BillingSvc
+    
+    BillingSvc <--> Razorpay
+    BillingSvc <--> Stripe
+    BillingSvc --> DB
     
     UsageSvc <--> DB
     SocialSvc <--> DB
@@ -66,14 +77,21 @@ The platform uses a **Shared Database, Isolated Documents** approach. Every sens
 - **Token Encryption**: Social media access tokens (YouTube, etc.) are encrypted at rest using **AES-256-CBC** before being stored in the database.
 - **Cross-Origin Isolation**: To enable high-performance client-side media processing (FFmpeg.wasm), the server enforces **COOP (same-origin)** and **COEP (require-corp)** headers. This allows `SharedArrayBuffer` usage while maintaining a secure sandbox.
 
-### 3. Role-Based Access Control (RBAC)
-Roles are hierarchical and enforced at the route level:
-- `superadmin`: Global platform control.
-- `admin`: Organization-level control (Settings, Team, Billing).
-- `publisher`: Full scheduling and publishing authority.
-- `reviewer`: Approval/rejection of drafted content.
-- `creator`: Content drafting and media management.
-- `user`: View-only access.
+---
+
+## 💳 Billing & Payment Architecture
+
+The platform implements a robust subscription engine supporting multiple payment gateways:
+
+### 1. Gateway Orchestration
+- **Razorpay Service**: Handles INR payments, order creation, and signature verification.
+- **Stripe Service**: Manages international payments and webhook processing for asynchronous event handling (e.g., subscription renewals).
+- **Billing Service**: A centralized service that manages plan transitions, quota synchronization, and side-effects of successful payments.
+
+### 2. Automated Invoicing
+- **PDF Generation**: Uses a specialized utility to generate professional invoices upon successful payment.
+- **Mail Integration**: Invoices are automatically dispatched to organization admins via `MailService`.
+- **Audit Trails**: All financial transactions are recorded in the `Invoices` collection and logged in the `AuditLog`.
 
 ---
 
@@ -93,16 +111,23 @@ Roles are hierarchical and enforced at the route level:
 - **Client-Side Editing**: 
     - **Images**: Uses Fabric.js to manipulate canvas elements directly in the browser.
     - **Videos**: Uses FFmpeg.wasm (WebAssembly) to trim videos client-side, reducing server CPU load and avoiding massive file transfers for simple edits.
-- **Storage Tracking**: The `Media` model aggregates file sizes to enforce the organization's `storageLimitGB`.
 
 ---
 
 ## 📊 Resource Management (Quotas)
 
-The platform implements a real-time **Resource Authority** system:
-- **Usage Model**: A dedicated collection tracks `postsCount`, `platformsCount`, and `storageUsedBytes`.
-- **Atomic Updates**: Increments and decrements are performed using `$inc` to ensure data consistency during concurrent operations.
-- **Synchronized Limits**: When a SuperAdmin updates an organization's limits in the Registry, the `Usage` record is automatically synchronized to reflect the new authority immediately.
+The platform implements a tiered **Resource Authority** system with the following default plans:
+
+| Feature | Free | Professional | Enterprise |
+|---------|------|--------------|------------|
+| Monthly Posts | 10 | 100 | 5,000 |
+| Social Accounts | 3 | 10 | 50 |
+| Storage | 500MB | 10GB | 100GB |
+| Team Members | 1 | 5 | 20 |
+| YouTube Quota | 5,000 | 20,000 | 100,000 |
+
+- **Usage Model**: A dedicated collection tracks real-time consumption (`postsUsed`, `platformsUsed`, `storageUsedBytes`).
+- **Plan Synchronization**: When an organization upgrades, the `syncOrganizationQuotas` method atomically updates both the `Organization` document and the active `Usage` record.
 
 ---
 
@@ -110,21 +135,21 @@ The platform implements a real-time **Resource Authority** system:
 
 ```text
 server/src/
-├── controllers/    # Request orchestration
+├── controllers/    # Request orchestration & Validation
 ├── models/         # Mongoose Schemas (The "Source of Truth")
-├── services/       # Complex business logic (Social APIs, Quotas)
+├── services/       # Business logic (Billing, Social, Quotas)
 ├── middlewares/    # Security, Tenant Isolation, File Uploads
-└── utils/          # Encryption, API Response formatting, Async handling
+└── utils/          # Encryption, Invoice Generation, PDF Logic
 
 client/src/
-├── features/       # Redux Toolkit Slices & RTK Query API Definitions
-├── components/     # Atomic UI components (Shadcn/ui)
+├── features/       # RTK Query API & Redux State
+├── components/     # Atomic UI components
 └── pages/          # Layouts and Route-level views
 ```
 
 ---
 
 ## 📈 Scalability Considerations
-- **Stateless API**: The backend is designed to be stateless, allowing for horizontal scaling behind a load balancer.
-- **Database Indexing**: Critical indices exist on `organizationId`, `userId`, and `status` fields to ensure sub-second query performance even at scale.
-- **CDN Offloading**: All heavy media assets are served via Cloudinary, reducing the bandwidth load on the primary application servers.
+- **Stateless API**: The backend is designed to be stateless, allowing for horizontal scaling.
+- **Idempotency**: Atomic operations on `Usage` and `Post` collections prevent race conditions in multi-instance environments.
+- **CDN Offloading**: All heavy media assets are served via Cloudinary.

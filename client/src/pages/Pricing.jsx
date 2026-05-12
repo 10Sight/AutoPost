@@ -111,10 +111,10 @@ const Pricing = () => {
   return (
     <div className="py-12 space-y-12">
       <div className="text-center max-w-2xl mx-auto space-y-4">
-        <h2 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
+        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
           Simple, Transparent Pricing
         </h2>
-        <p className="text-slate-500 text-lg leading-relaxed">
+        <p className="text-slate-500 text-sm sm:text-lg leading-relaxed">
           Scale your social presence with predictable costs. No hidden fees, just pure growth.
         </p>
 
@@ -133,14 +133,14 @@ const Pricing = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto px-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto px-4">
         {plans.map((plan) => {
           const displayPrice = billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
           
           return (
             <div
               key={plan.name}
-              className={`relative flex flex-col p-8 rounded-3xl border transition-all duration-200 ${
+              className={`relative flex flex-col p-6 sm:p-8 rounded-3xl border transition-all duration-200 ${
                 plan.highlight
                   ? 'bg-white dark:bg-slate-950 border-indigo-600 dark:border-indigo-500 shadow-[0_8px_30px_rgb(0,0,0,0.04)] z-10'
                   : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'
@@ -175,7 +175,7 @@ const Pricing = () => {
 
                   <div className="pt-2">
                       <div className="flex items-baseline gap-1">
-                          <span className="text-5xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums">${displayPrice}</span>
+                          <span className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums">${displayPrice}</span>
                           <span className="text-sm font-semibold text-slate-400">/mo</span>
                       </div>
                   </div>

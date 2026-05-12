@@ -27,6 +27,7 @@ import {
     Home,
     Search as SearchIcon,
     PlusSquare,
+    PenSquare,
     MoreHorizontal,
     Library,
     Folder
@@ -55,6 +56,7 @@ import { Switch } from "../components/ui/switch";
 import { Textarea } from "../components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { ScrollArea } from "../components/ui/scroll-area";
+import { cn } from "../lib/utils";
 import { Separator } from "../components/ui/separator";
 import {
     Dialog,
@@ -154,6 +156,7 @@ const CreatePost = () => {
     const [youtubeCategory, setYoutubeCategory] = useState("22"); // People & Blogs
     const [publishAt, setPublishAt] = useState("");
 
+    const [activeTab, setActiveTab] = useState("editor"); // 'editor' | 'preview'
     // Professional Editor State
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [selectedMediaForEdit, setSelectedMediaForEdit] = useState(null);
@@ -328,12 +331,36 @@ const CreatePost = () => {
     };
 
     return (
-        <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-8">
-            <h1 className="text-3xl font-bold tracking-tight">Create New Post</h1>
+        <div className="mx-auto max-w-6xl space-y-4 md:space-y-6 p-3 md:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Create New Post</h1>
+                
+                {/* Mobile Tab Switcher */}
+                <div className="lg:hidden flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-full sm:w-auto">
+                    <button 
+                        onClick={() => setActiveTab("editor")}
+                        className={cn(
+                            "flex-1 px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2", 
+                            activeTab === "editor" ? "bg-white dark:bg-slate-700 text-primary shadow-sm" : "text-slate-500"
+                        )}
+                    >
+                        <PenSquare className="w-3.5 h-3.5" /> Compose
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab("preview")}
+                        className={cn(
+                            "flex-1 px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2", 
+                            activeTab === "preview" ? "bg-white dark:bg-slate-700 text-primary shadow-sm" : "text-slate-500"
+                        )}
+                    >
+                        <Globe className="w-3.5 h-3.5" /> Preview
+                    </button>
+                </div>
+            </div>
 
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
                 {/* Editor Column */}
-                <div className="lg:col-span-7 space-y-6">
+                <div className={cn("lg:col-span-7 space-y-6", activeTab !== "editor" && "hidden lg:block")}>
                     <Card className="h-fit border-none shadow-md bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
                         <CardHeader>
                             <CardTitle className="text-xl">Compose Post</CardTitle>
@@ -716,9 +743,9 @@ const CreatePost = () => {
                     </Card>
                 </div>
 
-                {/* Preview Column - Sticky */}
-                <div className="lg:col-span-5 space-y-6">
-                    <div className="sticky top-24 space-y-4">
+                {/* Preview Column - Sticky on Desktop */}
+                <div className={cn("lg:col-span-5 space-y-6", activeTab !== "preview" && "hidden lg:block")}>
+                    <div className="lg:sticky lg:top-24 space-y-4">
                         <div className="flex flex-col gap-4">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Live Preview</h3>
@@ -820,16 +847,16 @@ const CreatePost = () => {
 
             {/* Media Selection Dialog */}
             <Dialog open={isMediaModalOpen} onOpenChange={setIsMediaModalOpen}>
-                <DialogContent className="max-w-7xl h-[85vh] flex flex-col p-0 overflow-hidden">
-                    <DialogHeader className="p-6 pb-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
-                        <div className="flex items-center justify-between">
+                <DialogContent className="max-w-7xl w-[95vw] h-[90vh] md:h-[85vh] flex flex-col p-0 overflow-hidden">
+                    <DialogHeader className="p-4 md:p-6 pb-2 md:pb-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
-                                <DialogTitle className="text-xl">Select Media Content</DialogTitle>
-                                <DialogDescription className="text-xs mt-1">
+                                <DialogTitle className="text-lg md:text-xl">Select Media Content</DialogTitle>
+                                <DialogDescription className="text-[10px] md:text-xs mt-1">
                                     Browse your organization's creative library to find the perfect assets.
                                 </DialogDescription>
                             </div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2 md:gap-4 justify-between md:justify-end">
                                 <MediaUploader 
                                     selectedGroupId={selectedGroup !== "all" ? selectedGroup : undefined}
                                     activeFolderId={activeFolderId}
@@ -841,9 +868,9 @@ const CreatePost = () => {
                                         setIsMediaModalOpen(false); // Close after direct upload for better UX
                                     }}
                                 />
-                                <Separator orientation="vertical" className="h-8" />
+                                <Separator orientation="vertical" className="hidden md:block h-8" />
                                 <div className="flex items-center gap-2">
-                                    <Badge variant="secondary" className="h-6">
+                                    <Badge variant="secondary" className="h-6 whitespace-nowrap">
                                         {selectedMediaIds.length} Selected
                                     </Badge>
                                     {selectedMediaIds.length > 0 && (
@@ -853,7 +880,7 @@ const CreatePost = () => {
                                             className="h-6 px-2 text-[10px] text-red-500 hover:text-red-600 hover:bg-red-50"
                                             onClick={() => setSelectedMediaIds([])}
                                         >
-                                            Clear Selection
+                                            Clear
                                         </Button>
                                     )}
                                 </div>
@@ -861,48 +888,42 @@ const CreatePost = () => {
                         </div>
                     </DialogHeader>
 
-                    <div className="flex-1 flex overflow-hidden min-h-0">
-                        {/* Sidebar - Folder Navigation (Production-Level Scalable UI) */}
-                        <div className="w-64 border-r border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 flex flex-col shrink-0">
-                            <div className="p-4 pb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                    <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
+                        {/* Sidebar - Folder Navigation - Responsive: Sidebar on desktop, Horizontal scroll on mobile */}
+                        <div className="w-full md:w-64 md:border-r border-b md:border-b-0 border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 flex flex-col shrink-0">
+                            <div className="hidden md:block p-4 pb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
                                 Folders
                             </div>
-                            <ScrollArea className="flex-1 px-3">
-                                <div className="space-y-1 pb-4">
+                            <ScrollArea className="flex-1 md:px-3">
+                                <div className="flex md:flex-col gap-1 p-2 md:p-0 md:pb-4 overflow-x-auto md:overflow-x-visible no-scrollbar">
                                     {/* Default "All Media" view */}
                                     <button
                                         onClick={() => setActiveFolderId(null)}
-                                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                        className={`whitespace-nowrap flex items-center gap-2 md:gap-3 px-3 py-1.5 md:py-2.5 rounded-lg text-[10px] md:text-sm font-medium transition-all shrink-0 ${
                                             activeFolderId === null
                                             ? "bg-primary text-white shadow-md shadow-primary/20"
-                                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent"
                                         }`}
                                     >
-                                        <Library className="h-4 w-4" />
+                                        <Library className="h-3 w-3 md:h-4 md:w-4" />
                                         <span>All Assets</span>
                                     </button>
 
                                     {/* Organization-specific folders */}
-                                    {isLoadingFolders ? (
-                                        <div className="flex justify-center p-8">
-                                            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                                        </div>
-                                    ) : foldersData?.data?.length > 0 ? (
-                                        foldersData.data.map((folder) => (
-                                            <button
-                                                key={folder._id}
-                                                onClick={() => setActiveFolderId(folder._id)}
-                                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                                                    activeFolderId === folder._id
-                                                    ? "bg-primary text-white shadow-md shadow-primary/20"
-                                                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                                                }`}
-                                            >
-                                                <Folder className={`h-4 w-4 ${activeFolderId === folder._id ? "text-white" : "text-gray-400"}`} />
-                                                <span className="truncate">{folder.name}</span>
-                                            </button>
-                                        ))
-                                    ) : null}
+                                    {!isLoadingFolders && foldersData?.data?.map((folder) => (
+                                        <button
+                                            key={folder._id}
+                                            onClick={() => setActiveFolderId(folder._id)}
+                                            className={`whitespace-nowrap flex items-center gap-2 md:gap-3 px-3 py-1.5 md:py-2.5 rounded-lg text-[10px] md:text-sm font-medium transition-all shrink-0 ${
+                                                activeFolderId === folder._id
+                                                ? "bg-primary text-white shadow-md shadow-primary/20"
+                                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent"
+                                            }`}
+                                        >
+                                            <Folder className={`h-3 w-3 md:h-4 md:w-4 ${activeFolderId === folder._id ? "text-white" : "text-gray-400"}`} />
+                                            <span className="truncate max-w-[100px] md:max-w-none">{folder.name}</span>
+                                        </button>
+                                    ))}
                                 </div>
                             </ScrollArea>
                         </div>

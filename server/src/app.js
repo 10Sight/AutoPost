@@ -128,19 +128,14 @@ app.use("/api/v1/invitations", invitationRouter);
 
 // Serve Frontend in Production
 if (config.NODE_ENV === "production") {
-    const buildPath = path.join(__dirname, "../../client/dist");
-    
+    const buildPath = path.resolve(__dirname, "../../client/dist");
+
     if (fs.existsSync(buildPath)) {
         app.use(express.static(buildPath));
-        
-        app.get("(.*)", (req, res) => {
+
+        app.get("*", (req, res) => {
             if (!req.path.startsWith("/api/")) {
-                const indexPath = path.join(buildPath, "index.html");
-                if (fs.existsSync(indexPath)) {
-                    res.sendFile(indexPath);
-                } else {
-                    res.status(404).send("Frontend build not found. Please build the client.");
-                }
+                res.sendFile(path.join(buildPath, "index.html"));
             }
         });
     } else {

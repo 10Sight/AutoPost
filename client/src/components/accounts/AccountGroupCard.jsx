@@ -36,31 +36,31 @@ const AccountGroupCard = ({
     return (
         <div className="space-y-4 mb-8">
             <div className="flex items-center justify-between border-b pb-4 border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
+                    <div className="p-2 bg-primary/10 rounded-lg text-primary w-fit">
                         <FolderOpen className="h-5 w-5" />
                     </div>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{group.name}</h2>
-                            <Badge variant="secondary" className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-normal">
+                    <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-100 truncate">{group.name}</h2>
+                            <Badge variant="secondary" className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-bold text-[10px] uppercase tracking-wider whitespace-nowrap">
                                 {group.accounts?.length || 0} Accounts
                             </Badge>
                         </div>
                         {group.description && (
-                            <p className="text-sm text-muted-foreground mt-0.5">{group.description}</p>
+                            <p className="text-xs md:text-sm text-muted-foreground mt-1 line-clamp-1">{group.description}</p>
                         )}
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0 self-start sm:self-center mt-2 sm:mt-0">
                     <Button 
                         variant="ghost" 
                         size="sm" 
                         onClick={() => setIsExpanded(!isExpanded)}
-                        className="text-gray-500"
+                        className="text-gray-500 h-8 px-2"
                     >
-                        {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                        {isExpanded ? <ChevronUp className="h-4 w-4 md:h-5 md:w-5" /> : <ChevronDown className="h-4 w-4 md:h-5 md:w-5" />}
                     </Button>
                     
                     <DropdownMenu>

@@ -24,6 +24,12 @@ Auto Posting is a high-performance, multi-tenant platform designed to streamline
 - **Usage Tracking**: Real-time monitoring of resource consumption with automated enforcement.
 - **Granular RBAC**: Role-based access control (`Admin`, `Publisher`, `Reviewer`, `Creator`, `User`) with organization-level team management.
 
+### 💳 Subscription & Billing
+- **Tiered Plans**: Flexible pricing models (Free, Professional, Enterprise) with dynamic quota enforcement.
+- **Dual Payment Gateways**: Native integration with **Razorpay** (primary) and **Stripe** (webhook-supported).
+- **Automated Invoicing**: Real-time PDF invoice generation and email delivery upon successful payment.
+- **Resource Sync**: Instant synchronization of account limits and post quotas across the platform after plan upgrades.
+
 ---
 
 ## 💻 Technology Stack
@@ -40,7 +46,7 @@ Auto Posting is a high-performance, multi-tenant platform designed to streamline
 - **Runtime**: Node.js (ESM)
 - **Framework**: Express.js
 - **Database**: MongoDB with Mongoose
-- **Queue/Async**: Redis (Optional) / Cron-based scheduling
+- **Payments**: Razorpay & Stripe
 - **Real-time**: Socket.io (for status updates)
 
 ### Services & Infrastructure
@@ -57,6 +63,7 @@ Auto Posting is a high-performance, multi-tenant platform designed to streamline
 - MongoDB (v6.0+)
 - Cloudinary Account (for media)
 - Google Cloud Console Project (for YouTube API)
+- Razorpay / Stripe Account (for payments)
 
 ### 2. Installation
 ```bash
@@ -91,6 +98,14 @@ CLOUDINARY_API_SECRET=your_secret
 GOOGLE_CLIENT_ID=your_id
 GOOGLE_CLIENT_SECRET=your_secret
 GOOGLE_REDIRECT_URI=http://localhost:5173/dashboard/accounts
+
+# Razorpay
+RAZORPAY_KEY_ID=your_razorpay_key
+RAZORPAY_KEY_SECRET=your_razorpay_secret
+
+# Stripe
+STRIPE_SECRET_KEY=your_stripe_secret
+STRIPE_WEBHOOK_SECRET=your_webhook_secret
 ```
 
 ---
@@ -111,8 +126,10 @@ GOOGLE_REDIRECT_URI=http://localhost:5173/dashboard/accounts
 - [x] **Team Management**: Admin tools to manage member roles and access.
 - [x] **YouTube Shorts**: Specialized workflow for short-form video content.
 - [x] **Professional Media Editor**: Browser-based video trimming and image enhancement.
+- [x] **Razorpay Integration**: Automated subscription billing and INR payments.
+- [x] **Automated Invoicing**: PDF generation and email dispatch.
 - [ ] **AI Caption Studio**: LLM-powered caption generation and optimization.
-- [ ] **Stripe Integration**: Automated subscription billing and invoicing.
+- [ ] **Global Search**: Cross-entity search for organizations and users.
 
 ---
 

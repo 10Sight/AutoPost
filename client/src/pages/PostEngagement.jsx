@@ -301,7 +301,7 @@ const PostEngagement = () => {
                         {/* Redesigned Metrics & Post Info */}
                         <div className="space-y-8 px-2">
                             {/* Stats Grid */}
-                            <div className="grid grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                                 <NewMetricCard 
                                     icon={<Eye className="w-5 h-5" />} 
                                     label={post.platform === "x" ? "Impressions" : (post.platform === "youtube" ? "Total Views" : "Reach")} 
@@ -318,15 +318,16 @@ const PostEngagement = () => {
                                 />
                                 <NewMetricCard 
                                     icon={<MessageSquare className="w-5 h-5" />} 
-                                    label="Total Comments" 
+                                    label="Comments" 
                                     value={stats?.comments} 
                                     color={post.platform === 'facebook' ? 'blue' : 'emerald'} 
                                     trend="+8%"
+                                    className="sm:col-span-2 md:col-span-1"
                                 />
                             </div>
 
                             {/* Post Content & Creator Card */}
-                            <Card className={cn("border-none shadow-xl bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 overflow-hidden relative border-t-4", theme.border)}>
+                            <Card className={cn("border-none shadow-xl bg-white dark:bg-slate-900 rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-10 overflow-hidden relative border-t-4", theme.border)}>
                                 {/* Subtle Texture Overlay */}
                                 <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]" />
                                 
@@ -413,18 +414,18 @@ const PostEngagement = () => {
 
                     {/* Right Column: Interaction Section */}
                     <div className="lg:col-span-5 h-full lg:sticky lg:top-28">
-                        <Card className="border-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.1)] bg-white dark:bg-slate-900 rounded-[2.5rem] h-[calc(100vh-160px)] flex flex-col overflow-hidden border border-white dark:border-slate-800">
+                        <Card className="border-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.1)] bg-white dark:bg-slate-900 rounded-[1.5rem] md:rounded-[2.5rem] h-auto lg:h-[calc(100vh-160px)] flex flex-col overflow-hidden border border-white dark:border-slate-800">
                             <CardHeader className="bg-white dark:bg-slate-900 px-6 py-4 flex flex-col gap-4 border-b border-slate-100 dark:border-slate-800">
-                                <div className="flex flex-row items-center justify-between">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                                     <div className="flex items-center gap-3">
-                                        <h2 className="text-[16px] font-bold tracking-tight">Comments</h2>
-                                        <span className="text-[14px] text-slate-400 font-medium">{filteredComments.length}</span>
+                                        <h2 className="text-base font-bold tracking-tight">Comments</h2>
+                                        <span className="text-sm text-slate-400 font-medium">{filteredComments.length}</span>
                                     </div>
                                     <Button 
                                         variant="ghost" 
                                         size="sm" 
                                         onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
-                                        className="h-8 gap-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all px-2"
+                                        className="h-8 gap-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all px-2 -ml-2 sm:ml-0"
                                     >
                                         <SortDesc className="w-4 h-4" />
                                         <span className="text-[12px] font-bold uppercase tracking-wider">Sort by</span>
@@ -441,13 +442,13 @@ const PostEngagement = () => {
                                             className="h-9 pl-9 bg-slate-50 dark:bg-slate-950 border-none rounded-lg text-[13px] focus-visible:ring-1 focus-visible:ring-primary/30"
                                         />
                                     </div>
-                                    <div className="relative shrink-0">
+                                    <div className="relative shrink-0 w-full sm:w-auto">
                                         <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
                                         <Input 
                                             type="date"
                                             value={dateFilter}
                                             onChange={(e) => setDateFilter(e.target.value)}
-                                            className="h-9 pl-9 pr-2 bg-slate-50 dark:bg-slate-950 border-none rounded-lg text-[11px] focus-visible:ring-1 focus-visible:ring-primary/30 w-[130px]"
+                                            className="h-9 pl-9 pr-2 bg-slate-50 dark:bg-slate-950 border-none rounded-lg text-[11px] focus-visible:ring-1 focus-visible:ring-primary/30 w-full sm:w-[130px]"
                                         />
                                         {dateFilter && (
                                             <button 
@@ -462,7 +463,7 @@ const PostEngagement = () => {
                             </CardHeader>
                             
                             <CardContent className="flex-1 p-0 flex flex-col overflow-hidden bg-[#fafafa] dark:bg-slate-950/30">
-                                <div className="flex-1 overflow-y-auto px-8 py-8 custom-scrollbar">
+                                <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8 custom-scrollbar">
                                     {commentsLoading ? (
                                         <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-300 py-20">
                                             <div className="w-12 h-12 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
@@ -510,11 +511,11 @@ const PostEngagement = () => {
                                 </div>
 
                                 {/* Interaction Input Section (YouTube Mobile Style) */}
-                                <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 sticky bottom-0 z-10">
-                                    <div className="max-w-3xl mx-auto flex gap-4 items-start">
-                                        <Avatar className="w-10 h-10 shrink-0 border border-slate-100 dark:border-slate-800 shadow-sm">
+                                <div className="p-3 md:p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 sticky bottom-0 z-10">
+                                    <div className="max-w-3xl mx-auto flex gap-3 md:gap-4 items-start">
+                                        <Avatar className="w-8 h-8 md:w-10 md:h-10 shrink-0 border border-slate-100 dark:border-slate-800 shadow-sm">
                                             <AvatarImage src={post.socialAccountId?.metadata?.thumbnail} />
-                                            <AvatarFallback className="bg-primary/5 text-primary font-bold">{post.socialAccountId?.displayName?.[0]}</AvatarFallback>
+                                            <AvatarFallback className="bg-primary/5 text-primary font-bold text-xs">{post.socialAccountId?.displayName?.[0]}</AvatarFallback>
                                         </Avatar>
                                         
                                         <div className="flex-1 space-y-3">
@@ -561,12 +562,13 @@ const PostEngagement = () => {
     );
 };
 
-const NewMetricCard = ({ icon, label, value, color, trend }) => (
+const NewMetricCard = ({ icon, label, value, color, trend, className }) => (
     <div className={cn(
-        "group relative p-7 rounded-[2.5rem] border-2 transition-all duration-500 hover:translate-y-[-6px] shadow-lg overflow-hidden",
+        "group relative p-5 md:p-7 rounded-[1.5rem] md:rounded-[2.5rem] border-2 transition-all duration-500 hover:translate-y-[-6px] shadow-lg overflow-hidden",
         color === "blue" ? "bg-blue-50/10 border-blue-100/20 text-blue-600 dark:bg-blue-500/5 dark:border-blue-500/10 dark:text-blue-400 shadow-blue-500/5" :
         color === "rose" ? "bg-rose-50/10 border-rose-100/20 text-rose-600 dark:bg-rose-500/5 dark:border-rose-500/10 dark:text-rose-400 shadow-rose-500/5" :
-        "bg-emerald-50/10 border-emerald-100/20 text-emerald-600 dark:bg-emerald-500/5 dark:border-emerald-500/10 dark:text-emerald-400 shadow-emerald-500/5"
+        "bg-emerald-50/10 border-emerald-100/20 text-emerald-600 dark:bg-emerald-500/5 dark:border-emerald-500/10 dark:text-emerald-400 shadow-emerald-500/5",
+        className
     )}>
         {/* Background Decorative Pattern */}
         <div className="absolute top-0 right-0 w-24 h-24 bg-current opacity-[0.03] rounded-full translate-x-1/2 -translate-y-1/2" />
@@ -598,11 +600,11 @@ const NewMetricCard = ({ icon, label, value, color, trend }) => (
 const RedesignedCommentItem = ({ comment, onReply, onLike }) => {
     return (
         <div className="group relative animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex gap-3 items-start">
+            <div className="flex gap-2 md:gap-3 items-start">
                 {/* Standard Circular Avatar */}
-                <Avatar className="w-10 h-10 shrink-0 shadow-sm border border-slate-100 dark:border-slate-800">
+                <Avatar className="w-8 h-8 md:w-10 md:h-10 shrink-0 shadow-sm border border-slate-100 dark:border-slate-800">
                     <AvatarImage src={comment.authorAvatar} />
-                    <AvatarFallback className="bg-slate-100 dark:bg-slate-800 text-slate-500 font-bold text-xs">
+                    <AvatarFallback className="bg-slate-100 dark:bg-slate-800 text-slate-500 font-bold text-[10px] md:text-xs">
                         {comment.author[0]}
                     </AvatarFallback>
                 </Avatar>
@@ -650,16 +652,16 @@ const RedesignedCommentItem = ({ comment, onReply, onLike }) => {
 
                     {/* Threaded Nested Replies */}
                     {comment.replies && comment.replies.length > 0 && (
-                        <div className="mt-4 space-y-5 pl-1 border-l-[1.5px] border-slate-100 dark:border-slate-800 ml-1">
+                        <div className="mt-4 space-y-4 md:space-y-5 pl-0.5 md:pl-1 border-l-[1.5px] border-slate-100 dark:border-slate-800 ml-0.5 md:ml-1">
                             {comment.replies.map(reply => (
-                                <div key={reply.id} className="flex gap-3 group/reply pt-2">
-                                    <Avatar className="w-6 h-6 shrink-0 shadow-sm border border-slate-100 dark:border-slate-800">
+                                <div key={reply.id} className="flex gap-2 md:gap-3 group/reply pt-2">
+                                    <Avatar className="w-5 h-5 md:w-6 md:h-6 shrink-0 shadow-sm border border-slate-100 dark:border-slate-800">
                                         <AvatarImage src={reply.authorAvatar} />
-                                        <AvatarFallback className="bg-slate-50 dark:bg-slate-900 text-[10px]">
+                                        <AvatarFallback className="bg-slate-50 dark:bg-slate-900 text-[8px] md:text-[10px]">
                                             {reply.author?.[0]}
                                         </AvatarFallback>
                                     </Avatar>
-                                    <div className="flex-1 space-y-0.5">
+                                    <div className="flex-1 min-w-0 space-y-0.5">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[12px] font-bold text-slate-800 dark:text-slate-200">{reply.author}</span>

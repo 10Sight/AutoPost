@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "https://autopost-server-8yze.onrender.com/api/v1",
+    baseURL: import.meta.env.VITE_API_URL || "/api/v1",
     withCredentials: true,
     headers: {
         "Content-Type": "application/json",
@@ -19,9 +19,10 @@ axiosInstance.interceptors.response.use(
             originalRequest._retry = true;
 
             try {
-                // Attempt to refresh token - using relative URL or ensuring it uses the correct base
+                // Attempt to refresh token using the configured base URL or relative path
+                const apiBase = import.meta.env.VITE_API_URL || "/api/v1";
                 await axios.post(
-                    `${import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"}/auth/refresh-token`,
+                    `${apiBase}/auth/refresh-token`,
                     {},
                     { withCredentials: true }
                 );

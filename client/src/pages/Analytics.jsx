@@ -134,13 +134,13 @@ const Analytics = () => {
         <div className="flex-1 space-y-8 p-4 md:p-8 pt-6 max-w-[1600px] mx-auto">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+                    <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100 text-center md:text-left">
                         Analytics Center
                     </h2>
-                    <div className="flex items-center gap-3 mt-1">
-                        <p className="text-muted-foreground">Real-time performance metrics</p>
+                    <div className="flex flex-col sm:flex-row items-center gap-3 mt-2 md:mt-1">
+                        <p className="text-sm text-muted-foreground text-center md:text-left">Real-time performance metrics</p>
                         <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
-                            <SelectTrigger className="w-[180px] h-7 text-[10px] font-bold uppercase tracking-wider bg-transparent border-primary/20 hover:border-primary/50 transition-all rounded-full px-4">
+                            <SelectTrigger className="w-full sm:w-[180px] h-8 text-[10px] font-bold uppercase tracking-wider bg-transparent border-primary/20 hover:border-primary/50 transition-all rounded-full px-4">
                                 <SelectValue placeholder="All Groups" />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-950/95 shadow-2xl">
@@ -154,7 +154,7 @@ const Analytics = () => {
                         </Select>
                     </div>
                 </div>
-                <div className="flex items-center gap-3 bg-white dark:bg-gray-900 p-1.5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+                <div className="flex items-center justify-center gap-3 bg-white dark:bg-gray-900 p-1.5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm w-fit mx-auto md:mx-0">
                     <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20 px-2 py-0.5 font-semibold text-[10px]">
                         Live Data
                     </Badge>
@@ -168,32 +168,32 @@ const Analytics = () => {
 
                 <CardContent className="p-8 md:p-10 relative z-10">
                     <div className="grid md:grid-cols-2 gap-10 items-center">
-                        <div className="space-y-4">
+                        <div className="space-y-4 text-center md:text-left">
                             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 border border-white/20">
                                 <TrendingUp className="h-3.5 w-3.5 text-blue-100" />
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-50/90">Global Performance Summary</span>
                             </div>
                             <div className="space-y-1 min-h-[80px] flex flex-col justify-center">
                                 {isUpdating ? (
-                                    <div className="h-16 w-48 bg-white/20 animate-pulse rounded-lg" />
+                                    <div className="h-16 w-48 bg-white/20 animate-pulse rounded-lg mx-auto md:mx-0" />
                                 ) : (
                                     <>
-                                        <h3 className="text-5xl md:text-6xl font-bold tracking-tight flex items-baseline gap-3">
+                                        <h3 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight flex items-baseline justify-center md:justify-start gap-2 sm:gap-3">
                                             {totalAudience.toLocaleString()}
-                                            <span className="text-lg font-medium text-blue-100 opacity-80">Followers</span>
+                                            <span className="text-base sm:text-lg font-medium text-blue-100 opacity-80">Followers</span>
                                         </h3>
-                                        <p className="text-lg text-blue-100/80 font-medium">
-                                            Across <span className="text-white font-bold underline decoration-blue-400 decoration-2 underline-offset-4 pointer-events-none">{activePlatformsCount} platforms</span> with <span className="text-white font-bold underline decoration-green-400 decoration-2 underline-offset-4 pointer-events-none">{totalScheduledPosts} total posts</span> tracked.
+                                        <p className="text-sm sm:text-lg text-blue-100/80 font-medium">
+                                            Across <span className="text-white font-bold underline decoration-blue-400 decoration-2 underline-offset-4 pointer-events-none">{activePlatformsCount} platforms</span> with <span className="text-white font-bold underline decoration-green-400 decoration-2 underline-offset-4 pointer-none">{totalScheduledPosts} total posts</span>.
                                         </p>
                                     </>
                                 )}
                             </div>
-                            <div className="flex flex-wrap gap-3 pt-4">
-                                <Button className="bg-white text-indigo-700 hover:bg-white/90 font-bold rounded-xl px-6 py-5 shadow-lg group/btn">
+                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-4">
+                                <Button className="w-full sm:w-auto bg-white text-indigo-700 hover:bg-white/90 font-bold rounded-xl px-6 py-5 shadow-lg group/btn">
                                     Generate Report
                                     <ArrowUpRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
                                 </Button>
-                                <Button variant="outline" className="border-white/40 text-white hover:bg-white hover:text-indigo-700 font-semibold rounded-xl px-6 py-5 bg-white/10 transition-all">
+                                <Button variant="outline" className="w-full sm:w-auto border-white/40 text-white hover:bg-white hover:text-indigo-700 font-semibold rounded-xl px-6 py-5 bg-white/10 transition-all">
                                     Compare
                                 </Button>
                             </div>
@@ -253,7 +253,7 @@ const Analytics = () => {
 
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-7 mt-12">
                 {/* Platform Distribution */}
-                <Card className="col-span-3 border-none bg-white/95 dark:bg-gray-950/95 shadow-xl shadow-black/5">
+                <Card className="col-span-full lg:col-span-3 border-none bg-white/95 dark:bg-gray-950/95 shadow-xl shadow-black/5">
                     <CardHeader className="pb-2">
                         <div className="flex items-center justify-between mb-4">
                             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -311,7 +311,7 @@ const Analytics = () => {
                 </Card>
 
                 {/* Status Breakdown */}
-                <Card className="col-span-4 border-none bg-white/95 dark:bg-gray-950/95 shadow-xl shadow-black/5">
+                <Card className="col-span-full lg:col-span-4 border-none bg-white/95 dark:bg-gray-950/95 shadow-xl shadow-black/5">
                     <CardHeader className="pb-2">
                         <div className="flex items-center justify-between mb-4">
                             <div className="h-10 w-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500">
@@ -371,16 +371,16 @@ const Analytics = () => {
                 </Card>
 
                 {/* Publishing Volume Trends */}
-                <Card className="col-span-7 border-none bg-white dark:bg-gray-950 shadow-2xl shadow-black/5 mt-4">
+                <Card className="col-span-full border-none bg-white dark:bg-gray-950 shadow-2xl shadow-black/5 mt-4">
                     <CardHeader className="pb-2">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-6">
                             <div className="flex items-center gap-4">
                                 <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
                                     <TrendingUp className="h-5 w-5" />
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <CardTitle className="text-xl font-bold">Publishing Volume Trends</CardTitle>
+                                        <CardTitle className="text-lg md:text-xl font-bold">Publishing Volume Trends</CardTitle>
                                         <Badge variant="secondary" className="px-1.5 py-0 h-4 text-[9px] font-black uppercase tracking-tighter bg-primary/10 text-primary border-none">
                                             {selectedDays}D Active
                                         </Badge>
@@ -390,9 +390,9 @@ const Analytics = () => {
                                     </CardDescription>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-col sm:flex-row items-center gap-3">
                                 <Select value={selectedDays} onValueChange={setSelectedDays}>
-                                    <SelectTrigger className="w-[120px] h-9 bg-white/50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 rounded-xl focus:ring-primary/20 transition-all">
+                                    <SelectTrigger className="w-full sm:w-[120px] h-9 bg-white/50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 rounded-xl focus:ring-primary/20 transition-all">
                                         <SelectValue placeholder="30 Days" />
                                     </SelectTrigger>
                                     <SelectContent className="rounded-xl border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl">
@@ -403,9 +403,11 @@ const Analytics = () => {
                                     </SelectContent>
                                 </Select>
                                 <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-                                    <SelectTrigger className="w-[160px] h-9 bg-white/50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 rounded-xl focus:ring-primary/20">
-                                        <Filter className="h-3.5 w-3.5 mr-2 opacity-50" />
-                                        <SelectValue placeholder="All Platforms" />
+                                    <SelectTrigger className="w-full sm:w-[160px] h-9 bg-white/50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 rounded-xl focus:ring-primary/20">
+                                        <div className="flex items-center">
+                                            <Filter className="h-3.5 w-3.5 mr-2 opacity-50" />
+                                            <SelectValue placeholder="All Platforms" />
+                                        </div>
                                     </SelectTrigger>
                                     <SelectContent className="rounded-xl border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl">
                                         <SelectItem value="all" className="rounded-lg">All Platforms</SelectItem>

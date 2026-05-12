@@ -96,7 +96,7 @@ const CalendarView = memo(({ posts, onDateClick }) => {
             </div>
 
             {/* Calendar Grid */}
-            <div className="grid grid-cols-7 auto-rows-[minmax(120px,auto)]">
+            <div className="grid grid-cols-7 auto-rows-[minmax(60px,auto)] sm:auto-rows-[minmax(120px,auto)]">
                 {calendarDays.map((day, dayIdx) => {
                     const dayPosts = getPostsForDay(day);
                     const isSelectedMonth = isSameMonth(day, monthStart);
@@ -107,19 +107,35 @@ const CalendarView = memo(({ posts, onDateClick }) => {
                             key={day.toString()}
                             onClick={() => onDateClick && onDateClick(day)}
                             className={cn(
-                                "relative border-b border-r border-gray-200 dark:border-gray-800 p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-900/50 cursor-pointer group",
+                                "relative border-b border-r border-gray-200 dark:border-gray-800 p-1 sm:p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-900/50 cursor-pointer group min-h-[80px] sm:min-h-0",
                                 !isSelectedMonth && "bg-gray-50/30 dark:bg-gray-900/30 text-gray-400",
                                 isCurrentDay && "bg-blue-50/30 dark:bg-blue-900/10"
                             )}
                         >
                             <div className={cn(
-                                "text-sm font-medium h-7 w-7 flex items-center justify-center rounded-full mb-1",
+                                "text-xs sm:text-sm font-medium h-6 w-6 sm:h-7 sm:w-7 flex items-center justify-center rounded-full mb-1",
                                 isCurrentDay ? "bg-primary text-white" : "text-gray-700 dark:text-gray-300"
                             )}>
                                 {format(day, 'd')}
                             </div>
 
-                            <div className="space-y-1.5 overflow-y-auto max-h-[100px] scrollbar-hide">
+                            {/* Mobile View: Dots only */}
+                            <div className="flex flex-wrap gap-1 mt-auto sm:hidden">
+                                {dayPosts.slice(0, 4).map((post) => (
+                                    <div 
+                                        key={post._id}
+                                        className={cn(
+                                            "h-1.5 w-1.5 rounded-full",
+                                            post.status === 'posted' ? 'bg-green-500' : 
+                                            post.status === 'failed' ? 'bg-red-500' : 'bg-yellow-500'
+                                        )}
+                                    />
+                                ))}
+                                {dayPosts.length > 4 && <span className="text-[8px] font-bold text-gray-400">+{dayPosts.length - 4}</span>}
+                            </div>
+
+                            {/* Desktop View: Full Cards */}
+                            <div className="hidden sm:block space-y-1.5 overflow-y-auto max-h-[100px] scrollbar-hide">
                                 {dayPosts.map((post) => (
                                     <TooltipProvider key={post._id}>
                                         <Tooltip>
@@ -128,8 +144,7 @@ const CalendarView = memo(({ posts, onDateClick }) => {
                                                     "text-xs p-1.5 rounded-md border flex items-center gap-1.5 truncate shadow-sm transition-all hover:scale-[1.02]",
                                                     statusColors[post.status] || "bg-gray-100 border-gray-200"
                                                 )}>
-                                                    {/* Icon based on platform */}
-                                                    <Avatar className="h-3.5 w-3.5">
+                                                    <Avatar className="h-3.5 w-3.5 shrink-0">
                                                         <AvatarImage src={`https://ui-avatars.com/api/?name=${post.platforms?.[0] || 'P'}&background=random`} />
                                                         <AvatarFallback className="text-[8px]">{post.platforms?.[0]?.[0]}</AvatarFallback>
                                                     </Avatar>
@@ -148,8 +163,8 @@ const CalendarView = memo(({ posts, onDateClick }) => {
                                 ))}
                             </div>
 
-                            {/* Add button on hover */}
-                            <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {/* Add button on hover (Desktop only) */}
+                            <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex">
                                 <div className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center">
                                     <PlusIcon className="h-3 w-3" />
                                 </div>

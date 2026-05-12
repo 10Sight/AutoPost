@@ -170,20 +170,20 @@ export default function AuditLogs() {
     };
 
     return (
-        <div className="p-4 md:p-8 pt-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400 bg-clip-text text-transparent">Audit Logs</h1>
-                    <p className="text-muted-foreground mt-1">
-                        A detailed timeline of all system and user activities.
+        <div className="p-4 md:p-8 pt-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[1600px] mx-auto">
+            <div className="flex flex-col md:flex-row justify-between items-center md:items-start gap-6 text-center md:text-left">
+                <div className="w-full">
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400 bg-clip-text text-transparent">Audit Logs</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                        A detailed timeline of all system activities.
                     </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
                     {/* Group Filter Selector - Refined Premium Design */}
-                    <div className="flex items-center gap-2 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-md p-1.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60 shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/30 group/select">
+                    <div className="w-full sm:w-[180px] flex items-center gap-2 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-md p-1.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60 shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/30 group/select">
                         <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-                            <SelectTrigger className="w-[180px] h-8 border-none bg-transparent text-xs font-semibold text-slate-600 dark:text-slate-400 focus:ring-0 transition-colors group-hover/select:text-primary">
+                            <SelectTrigger className="w-full h-8 border-none bg-transparent text-xs font-semibold text-slate-600 dark:text-slate-400 focus:ring-0 transition-colors group-hover/select:text-primary">
                                 <div className="flex items-center">
                                     <Filter className="h-3.5 w-3.5 mr-2.5 text-primary/60 group-hover/select:text-primary transition-colors" />
                                     <SelectValue placeholder="Select Group" />
@@ -208,7 +208,7 @@ export default function AuditLogs() {
                     </div>
 
                     <Select value={actionFilter} onValueChange={setActionFilter}>
-                        <SelectTrigger className="w-[180px] h-11 border-slate-200/60 dark:border-slate-800/60 bg-white/50 dark:bg-slate-900/50 text-xs font-semibold text-slate-600 dark:text-slate-400 rounded-xl shadow-sm focus:ring-primary/20 hover:border-primary/30 transition-all duration-300 backdrop-blur-md">
+                        <SelectTrigger className="w-full sm:w-[180px] h-11 border-slate-200/60 dark:border-slate-800/60 bg-white/50 dark:bg-slate-900/50 text-xs font-semibold text-slate-600 dark:text-slate-400 rounded-xl shadow-sm focus:ring-primary/20 hover:border-primary/30 transition-all duration-300 backdrop-blur-md">
                             <SelectValue placeholder="Action Type" />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl shadow-2xl">
@@ -252,8 +252,60 @@ export default function AuditLogs() {
                             <p>No activity recorded yet.</p>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
-                            <Table>
+                        <div className="space-y-4">
+                            {/* Mobile View: Activity List */}
+                            <div className="lg:hidden space-y-3">
+                                {logs.map((log) => (
+                                    <div key={log._id} className="p-4 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex flex-col text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                                                <span>{format(new Date(log.timestamp), "MMM dd")}</span>
+                                                <span className="text-primary/70">{format(new Date(log.timestamp), "HH:mm:ss")}</span>
+                                            </div>
+                                            {getActionBadge(log.action)}
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-3">
+                                            {log.userId ? (
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-black text-primary shrink-0">
+                                                        {log.userId.fullName?.charAt(0) || "U"}
+                                                    </div>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="text-xs font-bold truncate">{log.userId.fullName}</span>
+                                                        <span className="text-[10px] text-muted-foreground truncate">{log.userId.email}</span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2 text-muted-foreground opacity-60">
+                                                    <KeyRound className="w-3.5 h-3.5" />
+                                                    <span className="text-[10px] font-bold uppercase">System</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100/50 dark:border-gray-700/50">
+                                            {renderDetails(log)}
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
+                                            <span className="text-[10px] font-mono text-muted-foreground opacity-60">REF: {log.entityId?.slice(-8)}</span>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="h-7 px-2 text-[10px] font-bold text-primary"
+                                                onClick={() => copyToClipboard(log.entityId, "Entity ID")}
+                                            >
+                                                <Copy className="h-3 w-3 mr-1.5" /> COPY ID
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Desktop View: Table */}
+                            <div className="hidden lg:block overflow-x-auto">
+                                <Table>
                                 <TableHeader>
                                     <TableRow className="bg-muted/30 hover:bg-muted/30">
                                         <TableHead className="w-[140px]">Date & Time</TableHead>
@@ -327,7 +379,8 @@ export default function AuditLogs() {
                                 </TableBody>
                             </Table>
                         </div>
-                    )}
+                    </div>
+                )}
 
                     {/* Pagination */}
                     {pagination && pagination.pages > 1 && (

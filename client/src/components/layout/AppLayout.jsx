@@ -125,11 +125,24 @@ const AppLayout = () => {
         <div className="flex h-screen bg-white dark:bg-[#0f172a] overflow-hidden font-sans">
             {isSuspended && <SuspendedScreen status={organization?.status} />}
 
+            {/* Mobile Sidebar Overlay */}
+            {!collapsed && isMobile && (
+                <div 
+                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-30 transition-opacity duration-300"
+                    onClick={() => setCollapsed(true)}
+                />
+            )}
+
             {/* Sidebar */}
             <div
-                className={`${collapsed ? "w-20" : "w-72"
-                    } h-screen bg-white dark:bg-[#0f172a] border-r border-[#e2e8f0] dark:border-gray-800 transition-all duration-300 ease-in-out flex flex-col z-20 overflow-hidden relative
-          ${isMobile && (collapsed ? "-translate-x-full" : "translate-x-0 fixed")}`}
+                className={cn(
+                    "h-screen bg-white dark:bg-[#0f172a] border-r border-[#e2e8f0] dark:border-gray-800 transition-all duration-300 ease-in-out flex flex-col z-40 overflow-hidden relative",
+                    // Desktop width logic: only apply if not mobile
+                    !isMobile && (collapsed ? "w-20" : "w-72"),
+                    // Mobile logic: always fixed, width is expanded width, translate handles visibility
+                    isMobile && "fixed w-72 inset-y-0 left-0",
+                    isMobile && (collapsed ? "-translate-x-full" : "translate-x-0")
+                )}
             >
                 {/* Fixed Logo section */}
                 <div className={cn(
@@ -164,6 +177,18 @@ const AppLayout = () => {
                             </span>
                         </div>
                     )}
+                    
+                    {/* Close Button for Mobile */}
+                    {isMobile && !collapsed && (
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="ml-auto text-slate-400"
+                            onClick={() => setCollapsed(true)}
+                        >
+                            <Menu className="h-5 w-5" />
+                        </Button>
+                    )}
                 </div>
 
                 {/* Sidebar Tabs */}
@@ -190,6 +215,7 @@ const AppLayout = () => {
                                 key={item.label}
                                 onClick={() => {
                                     navigate(item.link);
+                                    if (isMobile) setCollapsed(true);
                                 }}
                             >
                                 {isActive && !collapsed && (
@@ -221,7 +247,10 @@ const AppLayout = () => {
                     <div className="px-3 mb-2">
                         <div
                             className={cn("group p-3 flex items-center rounded-xl w-full transition-all duration-300 bg-primary/10 text-primary border border-primary/20 cursor-pointer hover:bg-primary/20 hover:shadow-md overflow-hidden", collapsed && "justify-center")}
-                            onClick={() => navigate("/admin-panel")}
+                            onClick={() => {
+                                navigate("/admin-panel");
+                                if (isMobile) setCollapsed(true);
+                            }}
                         >
                             <Crown className={cn("min-w-5 min-h-5 animate-pulse", collapsed ? "" : "mr-3")} />
                             {!collapsed && (
@@ -250,8 +279,8 @@ const AppLayout = () => {
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0 bg-[#f8fafc] dark:bg-[#020617] overflow-hidden relative">
                 {/* Header */}
-                <header className="h-20 flex items-center justify-between px-8 border-b border-[#f1f5f9] dark:border-gray-800 bg-white/70 dark:bg-[#0f172a]/70 backdrop-blur-xl z-10">
-                    <div className="flex items-center gap-4">
+                <header className="h-20 flex items-center justify-between px-4 sm:px-8 border-b border-[#f1f5f9] dark:border-gray-800 bg-white/70 dark:bg-[#0f172a]/70 backdrop-blur-xl z-10">
+                    <div className="flex items-center gap-2 sm:gap-4">
                         <Button
                             variant="ghost"
                             size="icon"
@@ -263,46 +292,46 @@ const AppLayout = () => {
 
                         <div className="hidden lg:block h-6 w-[1px] bg-[#e2e8f0] dark:bg-gray-800 mx-1" />
 
-                        <div className="hidden md:flex flex-col">
+                        <div className="hidden sm:flex flex-col">
                             <Breadcrumb>
                                 <BreadcrumbList>
                                     <BreadcrumbItem>
-                                        <Link to="/dashboard" className="text-xs font-bold text-[#94a3b8] hover:text-[#2563eb] transition-colors flex items-center gap-1">
+                                        <Link to="/dashboard" className="text-[10px] sm:text-xs font-bold text-[#94a3b8] hover:text-[#2563eb] transition-colors flex items-center gap-1">
                                             <Home className="w-3 h-3" /> PRIORITIZE
                                         </Link>
                                     </BreadcrumbItem>
                                     <BreadcrumbSeparator />
                                     <BreadcrumbItem>
-                                        <BreadcrumbPage className="text-xs font-black text-[#1e293b] dark:text-white uppercase tracking-wider">{pageName}</BreadcrumbPage>
+                                        <BreadcrumbPage className="text-[10px] sm:text-xs font-black text-[#1e293b] dark:text-white uppercase tracking-wider">{pageName}</BreadcrumbPage>
                                     </BreadcrumbItem>
                                 </BreadcrumbList>
                             </Breadcrumb>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-6">
-                        {/* Global Search */}
-                        <div className="hidden xl:flex relative group">
+                    <div className="flex items-center gap-2 sm:gap-6">
+                        {/* Global Search - Hidden on small mobile */}
+                        <div className="hidden md:flex relative group">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94a3b8] group-focus-within:text-[#2563eb] transition-colors" />
                             <input
                                 type="text"
                                 placeholder="Global search..."
-                                className="w-64 h-10 pl-10 pr-4 bg-[#f8fafc] dark:bg-gray-900 border border-[#e2e8f0] dark:border-gray-800 rounded-xl text-sm transition-all focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                                className="w-40 xl:w-64 h-10 pl-10 pr-4 bg-[#f8fafc] dark:bg-gray-900 border border-[#e2e8f0] dark:border-gray-800 rounded-xl text-sm transition-all focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
                             />
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3">
                             <NotificationBell />
 
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <div className="flex items-center gap-3 p-1 pr-3 rounded-full hover:bg-[#f1f5f9] dark:hover:bg-gray-800 cursor-pointer transition-all border border-[#f1f5f9] dark:border-gray-800">
-                                        <Avatar className="h-9 w-9 border-2 border-white dark:border-gray-700 shadow-sm">
+                                    <div className="flex items-center gap-2 sm:gap-3 p-1 sm:pr-3 rounded-full hover:bg-[#f1f5f9] dark:hover:bg-gray-800 cursor-pointer transition-all border border-[#f1f5f9] dark:border-gray-800">
+                                        <Avatar className="h-8 w-8 sm:h-9 sm:h-9 border-2 border-white dark:border-gray-700 shadow-sm">
                                             <AvatarImage
                                                 src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || "U")}&background=random`}
                                                 className="object-cover"
                                             />
-                                            <AvatarFallback className="font-bold text-sm bg-[#2563eb] text-white">
+                                            <AvatarFallback className="font-bold text-xs sm:text-sm bg-[#2563eb] text-white">
                                                 {user?.name?.[0] || "U"}
                                             </AvatarFallback>
                                         </Avatar>
@@ -357,7 +386,9 @@ const AppLayout = () => {
                 {/* Content */}
                 <ImpersonationBanner />
                 <main className="flex-1 overflow-y-auto relative scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
-                    <Outlet />
+                    <div className="p-4 sm:p-8">
+                        <Outlet />
+                    </div>
                     <footer className="mt-8 p-8 flex flex-col items-center gap-2 opacity-30 group hover:opacity-100 transition-opacity">
                         <div className="h-[1px] w-12 bg-slate-300 dark:bg-gray-700" />
                         <span className="text-[10px] font-black tracking-[0.5em] text-slate-400">10SIGHT v2.0</span>
