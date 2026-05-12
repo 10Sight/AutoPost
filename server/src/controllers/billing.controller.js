@@ -343,17 +343,6 @@ const downloadInvoice = asyncHandler(async (req, res) => {
     });
 });
 
-export {
-    createStripeSession,
-    handleStripeWebhook,
-    getBillingStatus,
-    createRazorpayOrder,
-    verifyRazorpayPayment,
-    downloadInvoice,
-    cancelSubscription,
-    updateBillingDetails
-};
-
 /**
  * Cancel subscription
  */
@@ -405,3 +394,14 @@ const updateBillingDetails = asyncHandler(async (req, res) => {
         new ApiResponse(200, org.billing, "Billing details updated successfully")
     );
 });
+
+export {
+    createStripeSession,
+    handleStripeWebhook,
+    getBillingStatus,
+    createRazorpayOrder,
+    verifyRazorpayPayment,
+    downloadInvoice,
+    cancelSubscription,
+    updateBillingDetails
+};

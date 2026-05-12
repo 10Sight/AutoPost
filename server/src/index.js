@@ -1,13 +1,18 @@
 import { config } from "./config/env.config.js";
+console.log("[Index] Importing connectDB...");
 import connectDB from "./db/index.db.js";
+console.log("[Index] Importing app...");
 import { app } from "./app.js";
+console.log("[Index] Importing logger...");
 import { logger } from "./utils/logger.js";
+console.log("[Index] Importing other modules...");
 import { initScheduler } from "./jobs/scheduler.job.js";
 import { initLoggingSubscriber } from "./subscribers/logging.subscriber.js";
 import { initSocketSubscriber } from "./subscribers/socket.subscriber.js";
 import { initAuditSubscriber } from "./subscribers/audit.subscriber.js";
 import { initRecyclingSubscriber } from "./subscribers/recycling.subscriber.js";
 import { initRuleSubscriber } from "./subscribers/rule.subscriber.js";
+console.log("[Index] All modules imported successfully!");
 
 initLoggingSubscriber();
 initAuditSubscriber();
