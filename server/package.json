@@ -38,6 +38,7 @@
     "socket.io": "^4.8.3",
     "stripe": "^22.0.2",
     "twitter-api-v2": "^1.29.0",
+    "compression": "^1.7.5",
     "winston": "^3.19.0"
   }
 }

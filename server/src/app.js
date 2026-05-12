@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
+import compression from "compression";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
@@ -11,6 +12,7 @@ import { fileURLToPath } from "url";
 import { config } from "./config/env.config.js";
 import { handleStripeWebhook } from "./controllers/billing.controller.js";
 import { ApiError } from "./utils/ApiError.js";
+import { logger } from "./utils/logger.js";
 
 // ESM __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -36,6 +38,7 @@ const authLimiter = rateLimit({
 });
 
 app.use(morgan("dev"));
+app.use(compression()); // Compress all responses
 app.use(limiter);
 
 app.use(
@@ -151,11 +154,14 @@ if (config.NODE_ENV === "production") {
     }
 }
 
-// Error handling middleware
+// Global Error Handler
 app.use((err, req, res, next) => {
-    if (config.NODE_ENV === "development") {
-        console.error(`[App Error] ${req.method} ${req.url}:`, err);
-    }
+    // Standardized logging for production auditing
+    logger.error(`${req.method} ${req.url} - ${err.message}`, {
+        stack: config.NODE_ENV === "development" ? err.stack : undefined,
+        user: req.user?._id,
+        org: req.organizationId
+    });
 
     const response = {
         success: false,
