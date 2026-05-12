@@ -39,6 +39,16 @@ const authLimiter = rateLimit({
     message: "Too many login attempts, please try again after 15 minutes",
 });
 
+app.use(morgan("dev"));
+
+// Asset Diagnostic Middleware (Render Debug)
+app.use((req, res, next) => {
+    if (req.path.includes("/assets/")) {
+        console.log(`[Asset Request] ${req.path}`);
+    }
+    next();
+});
+
 app.use(limiter);
 
 app.use(
@@ -74,7 +84,7 @@ app.use(
                 "script-src": ["'self'", "'unsafe-inline'", "https://*.razorpay.com", "https://checkout.razorpay.com", "https://accounts.google.com"],
                 "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
                 "img-src": ["'self'", "data:", "https://res.cloudinary.com", "https://*.googleusercontent.com"],
-                "connect-src": ["'self'", "https://api.cloudinary.com", "https://*.razorpay.com", "https://luna.razorpay.com"],
+                "connect-src": ["'self'", "https://api.cloudinary.com", "https://*.razorpay.com", "https://luna.razorpay.com", "https://lumberjack.razorpay.com"],
                 "frame-src": ["'self'", "https://*.razorpay.com", "https://checkout.razorpay.com", "https://accounts.google.com"],
                 "font-src": ["'self'", "https://fonts.gstatic.com"]
             },
@@ -86,7 +96,6 @@ app.use(
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(cookieParser());
-app.use(morgan("dev"));
 
 // Routes import
 import authRouter from "./routes/auth.routes.js";
