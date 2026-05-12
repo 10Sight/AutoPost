@@ -40,11 +40,18 @@ const updateOrganizationBranding = asyncHandler(async (req, res) => {
 });
 
 const getPublicBranding = asyncHandler(async (req, res) => {
-    // req.organization is populated by tenantMiddleware
+    // req.organization is populated by tenantMiddleware (optional here)
     const organization = req.organization;
 
+    // If no specific organization context, return default app branding
     if (!organization) {
-        throw new ApiError(404, "Organization not found in this context");
+        return res.status(200).json(new ApiResponse(200, {
+            name: "Auto Posting",
+            branding: {
+                primaryColor: "#000000",
+                logo: ""
+            }
+        }, "Default branding returned"));
     }
 
     // Return ONLY public branding data
