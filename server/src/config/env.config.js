@@ -58,8 +58,9 @@ const requiredFields = [
 
 requiredFields.forEach((field) => {
     if (!_config[field]) {
-        console.error(`❌ [CRITICAL ERROR] Environment variable "${field}" is missing in Render settings!`);
-        throw new Error(`Environment variable ${field} is missing!`);
+        console.error(`\n❌ [CRITICAL ERROR] Missing Environment Variable: "${field}"`);
+        console.error(`Please add "${field}" to your Render Environment settings.\n`);
+        process.exit(1);
     }
 });
 
