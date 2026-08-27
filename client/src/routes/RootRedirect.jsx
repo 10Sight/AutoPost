@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { selectCurrentToken } from "../features/auth/authSlice";
+import Home from "../pages/Home";
 
 const RootRedirect = () => {
     const token = useSelector(selectCurrentToken);
@@ -9,7 +10,7 @@ const RootRedirect = () => {
         return <Navigate to="/dashboard" replace />;
     }
 
-    return <Navigate to="/auth/login" replace />;
+    return <Home />;
 };
 
 export default RootRedirect;

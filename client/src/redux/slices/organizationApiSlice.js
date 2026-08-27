@@ -23,6 +23,40 @@ export const organizationApiSlice = apiSlice.injectEndpoints({
             }),
             invalidatesTags: ["Organization"],
         }),
+        getAiKeys: builder.query({
+            query: () => ({
+                url: "/organization/ai-keys",
+            }),
+            providesTags: ["AiKeys"],
+        }),
+        updateAiKeys: builder.mutation({
+            query: (data) => ({
+                url: "/organization/ai-keys",
+                method: "PUT",
+                body: data,
+            }),
+            invalidatesTags: ["AiKeys"],
+        }),
+        getGeminiOAuthUrl: builder.query({
+            query: () => ({
+                url: "/organization/oauth/gemini/auth",
+            }),
+        }),
+        disconnectGeminiOAuth: builder.mutation({
+            query: () => ({
+                url: "/organization/oauth/gemini/disconnect",
+                method: "POST",
+            }),
+            invalidatesTags: ["AiKeys"],
+        }),
+        updateGeminiProjectId: builder.mutation({
+            query: (projectId) => ({
+                url: "/organization/oauth/gemini/project",
+                method: "PUT",
+                body: { projectId },
+            }),
+            invalidatesTags: ["AiKeys"],
+        }),
         createStripeCheckout: builder.mutation({
             query: (data) => ({
                 url: "/billing/stripe/create-session",
@@ -69,14 +103,19 @@ export const organizationApiSlice = apiSlice.injectEndpoints({
     }),
 });
 
-export const { 
-    useGetOrganizationQuery, 
-    useUpdateOrganizationMutation, 
-    useGetPublicOrganizationQuery, 
-    useCreateStripeCheckoutMutation, 
+export const {
+    useGetOrganizationQuery,
+    useUpdateOrganizationMutation,
+    useGetPublicOrganizationQuery,
+    useCreateStripeCheckoutMutation,
     useGetBillingStatusQuery,
     useCreateRazorpayOrderMutation,
     useVerifyRazorpayPaymentMutation,
     useCancelSubscriptionMutation,
-    useUpdateBillingDetailsMutation
+    useUpdateBillingDetailsMutation,
+    useGetAiKeysQuery,
+    useUpdateAiKeysMutation,
+    useLazyGetGeminiOAuthUrlQuery,
+    useDisconnectGeminiOAuthMutation,
+    useUpdateGeminiProjectIdMutation,
 } = organizationApiSlice;

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useCreateScheduledPostMutation, useUpdateScheduledPostMutation } from "../features/posts/postsApi";
 import { useGetConnectedAccountsQuery, useScheduleYouTubePostMutation } from "../features/socialAccounts/socialAccountsApi";
 import { useGetGroupsQuery } from "../features/accountGroups/accountGroupsApi";
+import { useGetAiKeysQuery } from "../redux/slices/organizationApiSlice";
+import { useGetAccountUsageQuery } from "../redux/slices/usageApiSlice";
 import { useGetMediaQuery, useGetFoldersQuery } from "../features/media/mediaApi";
 import {
     Loader2,
@@ -30,7 +32,18 @@ import {
     PenSquare,
     MoreHorizontal,
     Library,
-    Folder
+    Folder,
+    Briefcase,
+    Coffee,
+    Star,
+    Laugh,
+    Palette,
+    Box,
+    Zap,
+    Square,
+    RectangleHorizontal,
+    RectangleVertical,
+    Clock
 } from "lucide-react";
 import { validateCaption } from "../utils/validateCaption";
 import { Badge } from "../components/ui/badge";
@@ -54,7 +67,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Switch } from "../components/ui/switch";
 import { Textarea } from "../components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { cn } from "../lib/utils";
 import { Separator } from "../components/ui/separator";
@@ -75,8 +88,85 @@ import MediaUploader from "../components/media/MediaUploader";
 import LinkedInPreview from "../components/post/previews/LinkedInPreview";
 import YouTubePreview from "../components/post/previews/YouTubePreview";
 import MediaEditorModal from "../components/media/editor/MediaEditorModal";
-import { Wand2 } from "lucide-react";
+import { Wand2, Sparkles, Languages, Check, ArrowUpRight, Flame, Lock, Film } from "lucide-react";
+import { Progress } from "../components/ui/progress";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+    TooltipProvider,
+} from "../components/ui/tooltip";
+import {
+    useGenerateTextMutation,
+    useGenerateImageMutation,
+    useGenerateVideoMutation,
+    useLazyGetJobStatusQuery,
+} from "../features/ai/aiApi";
 
+const TEXT_MODELS = [
+    { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash", keyField: "gemini" },
+    { value: "gpt-5-mini", label: "GPT-5 Mini", keyField: "openai" },
+    { value: "claude-sonnet-5", label: "Claude Sonnet 5", keyField: "anthropic" },
+];
+
+const TONE_OPTIONS = [
+    { value: "Professional", label: "Professional", Icon: Briefcase },
+    { value: "Casual", label: "Casual", Icon: Coffee },
+    { value: "Inspirational", label: "Inspirational", Icon: Star },
+    { value: "Humorous", label: "Humorous", Icon: Laugh },
+    { value: "Bold", label: "Bold", Icon: Flame },
+];
+
+const IMAGE_STYLE_OPTIONS = [
+    { value: "photorealistic", label: "Photorealistic", Icon: Camera },
+    { value: "digital art", label: "Digital Art", Icon: Palette },
+    { value: "3D render", label: "3D Render", Icon: Box },
+    { value: "neon cyberpunk", label: "Neon Cyberpunk", Icon: Zap },
+    { value: "minimalist", label: "Minimalist", Icon: Square },
+];
+
+const ASPECT_RATIO_OPTIONS = [
+    { value: "1:1", label: "Square (1:1)", Icon: Square },
+    { value: "16:9", label: "Landscape (16:9)", Icon: RectangleHorizontal },
+    { value: "9:16", label: "Portrait (9:16)", Icon: RectangleVertical },
+];
+
+const VIDEO_DURATION_OPTIONS = [
+    { value: "5", label: "5 Seconds", Icon: Clock },
+    { value: "10", label: "10 Seconds", Icon: Clock },
+];
+
+// Small icon-labelled select shared by the AI Studio's tone/style/ratio/duration
+// pickers — replaces plain-text <option> emoji prefixes (native <option> can't
+// render React icon components at all) with real lucide icons via SelectValue's
+// children override, the same pattern GroupFilter.jsx already uses.
+const IconSelect = ({ value, onValueChange, options, triggerClassName }) => {
+    const selected = options.find((o) => o.value === value);
+    return (
+        <Select value={value} onValueChange={onValueChange}>
+            <SelectTrigger className={cn("h-8 text-xs", triggerClassName)}>
+                <SelectValue placeholder="Select">
+                    {selected && (
+                        <span className="flex items-center gap-1.5">
+                            <selected.Icon className="h-3.5 w-3.5 text-violet-500" />
+                            {selected.label}
+                        </span>
+                    )}
+                </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+                {options.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                        <span className="flex items-center gap-2">
+                            <opt.Icon className="h-3.5 w-3.5 text-violet-500" />
+                            {opt.label}
+                        </span>
+                    </SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
+    );
+};
 
 const CreatePost = () => {
     const navigate = useNavigate();
@@ -84,6 +174,16 @@ const CreatePost = () => {
     const [createPost, { isLoading: isCreating }] = useCreateScheduledPostMutation();
     const [updatePost, { isLoading: isUpdating }] = useUpdateScheduledPostMutation();
     const [scheduleYouTubePost, { isLoading: isSchedulingYouTube }] = useScheduleYouTubePostMutation();
+
+    // AI Mutation and Polling hooks
+    const [generateText, { isLoading: isGeneratingText }] = useGenerateTextMutation();
+    const [generateImage] = useGenerateImageMutation();
+    const [generateVideo] = useGenerateVideoMutation();
+    const [getJobStatus] = useLazyGetJobStatusQuery();
+    const { data: aiKeysData } = useGetAiKeysQuery();
+    const aiKeyStatus = aiKeysData?.data || {};
+    const { data: usageData } = useGetAccountUsageQuery();
+    const aiUsage = usageData?.data?.usage;
     const isEditing = location.state?.isEditing;
     const editingPostId = location.state?.postId;
     const { data: accountsData } = useGetConnectedAccountsQuery();
@@ -160,6 +260,146 @@ const CreatePost = () => {
     // Professional Editor State
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [selectedMediaForEdit, setSelectedMediaForEdit] = useState(null);
+
+    // ==========================================
+    // AI CONTENT STUDIO - SAAS BYOK STATE & LOGIC
+    // ==========================================
+    const [aiActiveTab, setAiActiveTab] = useState("text"); // "text" | "image" | "video"
+    const [aiModel, setAiModel] = useState("gemini-2.5-flash");
+    const [aiPrompt, setAiPrompt] = useState("");
+    const [aiTone, setAiTone] = useState("Professional");
+    const [aiEmojis, setAiEmojis] = useState(true);
+    const [aiHashtags, setAiHashtags] = useState(3);
+    const [aiImageStyle, setAiImageStyle] = useState("photorealistic");
+    const [aiAspectRatio, setAiAspectRatio] = useState("1:1");
+    const [aiVideoDuration, setAiVideoDuration] = useState(10);
+    
+    // Polling states for background jobs
+    const [aiJobId, setAiJobId] = useState(null);
+    const [aiJobStatus, setAiJobStatus] = useState(null); // null | "pending" | "processing" | "completed" | "failed"
+    const [aiJobResult, setAiJobResult] = useState(null);
+    const [aiJobSource, setAiJobSource] = useState(null); // "generated" | "stock" — how the video result was actually produced
+    const [aiJobError, setAiJobError] = useState(null);
+    const [aiProgressMessage, setAiProgressMessage] = useState("");
+
+    // Generated text result state
+    const [generatedTextResult, setGeneratedTextResult] = useState("");
+
+    // Upsell modal state
+    const [isUpsellModalOpen, setIsUpsellModalOpen] = useState(false);
+
+    const handleTextGenerate = async () => {
+        if (!aiPrompt) {
+            toast.error("Please enter a prompt for your caption");
+            return;
+        }
+        try {
+            const result = await generateText({
+                prompt: aiPrompt,
+                tone: aiTone,
+                includeEmojis: aiEmojis,
+                hashtagCount: aiHashtags,
+                model: aiModel
+            }).unwrap();
+            
+            setGeneratedTextResult(result.data.text);
+            toast.success("AI Caption generated successfully!");
+        } catch (err) {
+            console.error("Text generation failed", err);
+            if (err.status === 403 || err.data?.message?.includes("limit reached")) {
+                setIsUpsellModalOpen(true);
+            } else {
+                toast.error(err.data?.message || "Failed to generate caption. Please try again.");
+            }
+        }
+    };
+
+    const startJobPolling = (jobId) => {
+        setAiJobStatus("pending");
+        setAiProgressMessage("Queueing generation...");
+
+        let pollInterval = setInterval(async () => {
+            try {
+                // Call the lazy RTK trigger
+                const response = await getJobStatus(jobId).unwrap();
+                const job = response.data;
+
+                setAiJobStatus(job.status);
+
+                if (job.status === "processing") {
+                    if (job.type === "image") {
+                        setAiProgressMessage("Drawing your high-res image...");
+                    } else if (aiKeyStatus.runway) {
+                        setAiProgressMessage("Generating your video with Runway AI (this can take a few minutes)...");
+                    } else {
+                        setAiProgressMessage("No video AI key configured — matching a stock clip instead...");
+                    }
+                } else if (job.status === "completed") {
+                    clearInterval(pollInterval);
+                    setAiJobResult(job.result);
+                    setAiJobSource(job.source);
+                    setAiProgressMessage("");
+                    toast.success("AI Media generated and uploaded successfully!");
+                } else if (job.status === "failed") {
+                    clearInterval(pollInterval);
+                    setAiJobError(job.error || "AI generation failed.");
+                    setAiProgressMessage("");
+                    toast.error(job.error || "AI generation failed.");
+                }
+            } catch (err) {
+                clearInterval(pollInterval);
+                console.error("Polling job failed", err);
+                setAiJobStatus("failed");
+                setAiJobError("Network polling error. Please try again.");
+                setAiProgressMessage("");
+            }
+        }, 2000); // Poll every 2 seconds
+    };
+
+    const handleMediaGenerate = async (type) => {
+        if (!aiPrompt) {
+            toast.error(`Please enter a prompt for your ${type}`);
+            return;
+        }
+
+        setAiJobId(null);
+        setAiJobStatus("pending");
+        setAiJobResult(null);
+        setAiJobSource(null);
+        setAiJobError(null);
+        setAiProgressMessage("Queueing generation...");
+
+        try {
+            let response;
+            if (type === "image") {
+                response = await generateImage({
+                    prompt: aiPrompt,
+                    style: aiImageStyle,
+                    aspectRatio: aiAspectRatio
+                }).unwrap();
+            } else {
+                response = await generateVideo({
+                    prompt: aiPrompt,
+                    aspectRatio: aiAspectRatio,
+                    duration: aiVideoDuration
+                }).unwrap();
+            }
+
+            const jobId = response.data.jobId;
+            setAiJobId(jobId);
+            startJobPolling(jobId);
+
+        } catch (err) {
+            console.error("Media generation initiation failed", err);
+            setAiJobStatus(null);
+            setAiProgressMessage("");
+            if (err.status === 403 || err.data?.message?.includes("limit reached")) {
+                setIsUpsellModalOpen(true);
+            } else {
+                toast.error(err.data?.message || "Failed to initiate AI generation.");
+            }
+        }
+    };
 
     useEffect(() => {
         const platform = accountsData?.data?.find(a => a._id === selectedAccount)?.platform || previewPlatform;
@@ -337,19 +577,19 @@ const CreatePost = () => {
                 
                 {/* Mobile Tab Switcher */}
                 <div className="lg:hidden flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-full sm:w-auto">
-                    <button 
+                    <button
                         onClick={() => setActiveTab("editor")}
                         className={cn(
-                            "flex-1 px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2", 
+                            "flex-1 px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer",
                             activeTab === "editor" ? "bg-white dark:bg-slate-700 text-primary shadow-sm" : "text-slate-500"
                         )}
                     >
                         <PenSquare className="w-3.5 h-3.5" /> Compose
                     </button>
-                    <button 
+                    <button
                         onClick={() => setActiveTab("preview")}
                         className={cn(
-                            "flex-1 px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2", 
+                            "flex-1 px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer",
                             activeTab === "preview" ? "bg-white dark:bg-slate-700 text-primary shadow-sm" : "text-slate-500"
                         )}
                     >
@@ -361,6 +601,338 @@ const CreatePost = () => {
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
                 {/* Editor Column */}
                 <div className={cn("lg:col-span-7 space-y-6", activeTab !== "editor" && "hidden lg:block")}>
+                    
+                    {/* ========================================== */}
+                    {/* AI CONTENT STUDIO GLASSMORPHIC INTERFACE */}
+                    {/* ========================================== */}
+                    <Card className="border-none shadow-lg bg-gradient-to-br from-violet-50/60 via-white to-indigo-50/40 dark:from-violet-950/20 dark:via-gray-900/60 dark:to-indigo-950/10 backdrop-blur-md border border-violet-100/50 dark:border-violet-900/20 animate-in fade-in duration-300">
+                        <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <CardTitle className="text-lg font-semibold tracking-tight text-violet-700 dark:text-violet-300 flex items-center gap-2">
+                                    <Sparkles className="h-5 w-5 text-amber-500 animate-pulse animate-duration-1000" />
+                                    AI Content Studio
+                                </CardTitle>
+                                <CardDescription className="text-xs text-gray-500 dark:text-gray-400">
+                                    Create professional posts, pictures, and video clips in seconds.
+                                </CardDescription>
+                            </div>
+
+                            <div className="flex flex-col items-end gap-1.5">
+                                {aiUsage && (
+                                    <div className="flex items-center gap-2 w-40" title={`${aiUsage.aiUsed} of ${aiUsage.aiLimit} monthly AI generations used`}>
+                                        <Progress value={Math.min(100, (aiUsage.aiUsed / aiUsage.aiLimit) * 100)} className="h-1.5 flex-1" />
+                                        <span className="text-[9px] font-semibold text-muted-foreground whitespace-nowrap">
+                                            {aiUsage.aiUsed}/{aiUsage.aiLimit}
+                                        </span>
+                                    </div>
+                                )}
+                                <TooltipProvider>
+                                    <div className="w-40">
+                                        <Select value={aiModel} onValueChange={setAiModel}>
+                                            <SelectTrigger className="h-8 text-[11px] font-medium border-violet-200/60 dark:border-violet-800/40 bg-white/60 dark:bg-gray-900/60">
+                                                <SelectValue placeholder="AI Model" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {TEXT_MODELS.map((m) => {
+                                                    const locked = !aiKeyStatus[m.keyField];
+                                                    if (!locked) {
+                                                        return (
+                                                            <SelectItem key={m.value} value={m.value} className="text-[11px] font-medium">
+                                                                {m.label}
+                                                            </SelectItem>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <Tooltip key={m.value}>
+                                                            <TooltipTrigger asChild>
+                                                                <div className="flex items-center justify-between gap-2 px-2 py-1.5 mx-1 text-[11px] text-muted-foreground/50 cursor-not-allowed rounded-sm select-none">
+                                                                    <span>{m.label}</span>
+                                                                    <Lock className="h-3 w-3" />
+                                                                </div>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="left" className="text-xs max-w-[180px]">
+                                                                🔒 Add a key in Settings → AI Keys to use {m.label}
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    );
+                                                })}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </TooltipProvider>
+                                {!aiKeyStatus[TEXT_MODELS.find(m => m.value === aiModel)?.keyField] && (
+                                    <Link to="/dashboard/org-settings?tab=ai" className="text-[10px] font-medium text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1">
+                                        <Lock className="h-2.5 w-2.5" /> Add key for this model
+                                    </Link>
+                                )}
+                            </div>
+                        </CardHeader>
+
+                        <CardContent className="space-y-4">
+                            {/* Tab selector */}
+                            <div className="flex bg-slate-100/80 dark:bg-slate-800/60 p-1 rounded-xl">
+                                <button
+                                    type="button"
+                                    onClick={() => setAiActiveTab("text")}
+                                    className={cn(
+                                        "flex-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                                        aiActiveTab === "text" ? "bg-white dark:bg-slate-700 text-violet-700 dark:text-violet-300 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                    )}
+                                >
+                                    <PenSquare className="w-3.5 h-3.5" /> Text / Captions
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setAiActiveTab("image")}
+                                    className={cn(
+                                        "flex-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                                        aiActiveTab === "image" ? "bg-white dark:bg-slate-700 text-violet-700 dark:text-violet-300 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                    )}
+                                >
+                                    <ImageIcon className="w-3.5 h-3.5" /> AI Images
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setAiActiveTab("video")}
+                                    className={cn(
+                                        "flex-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                                        aiActiveTab === "video" ? "bg-white dark:bg-slate-700 text-violet-700 dark:text-violet-300 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                    )}
+                                >
+                                    <Tv className="w-3.5 h-3.5" /> AI Video Clips
+                                </button>
+                            </div>
+
+                            {/* Prompt Input */}
+                            <div className="space-y-1.5">
+                                <div className="flex justify-between items-center px-1">
+                                    <Label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                        {aiActiveTab === "text" ? "What is your post about?" : aiActiveTab === "image" ? "Describe the image to generate" : "Describe the video clip to generate"}
+                                    </Label>
+                                    <span className="text-[10px] text-muted-foreground">{aiPrompt.length}/500</span>
+                                </div>
+                                <Textarea
+                                    value={aiPrompt}
+                                    onChange={(e) => setAiPrompt(e.target.value.substring(0, 500))}
+                                    placeholder={
+                                        aiActiveTab === "text" 
+                                        ? "e.g. Write an exciting product update post for our new automated scheduler tool..." 
+                                        : aiActiveTab === "image" 
+                                        ? "e.g. Minimalist design showing neon laptop and workspace with purple background, photorealistic..." 
+                                        : "e.g. Cinematic slow-motion drone flyover of a cozy office workspace..."
+                                    }
+                                    className="min-h-[75px] max-h-[120px] text-xs resize-none bg-white/40 dark:bg-gray-900/40 focus-visible:ring-violet-500/20"
+                                />
+                            </div>
+
+                            {/* Tab Options */}
+                            {aiActiveTab === "text" && (
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <div className="space-y-1">
+                                        <Label className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Copywriting Tone</Label>
+                                        <IconSelect value={aiTone} onValueChange={setAiTone} options={TONE_OPTIONS} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Hashtags ({aiHashtags})</Label>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="10"
+                                            value={aiHashtags}
+                                            onChange={(e) => setAiHashtags(parseInt(e.target.value))}
+                                            className="w-full h-8 cursor-pointer accent-violet-600"
+                                        />
+                                    </div>
+                                    <div className="space-y-1 flex flex-col justify-center items-center">
+                                        <Label className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Emojis</Label>
+                                        <div className="flex items-center gap-2 h-8">
+                                            <Switch
+                                                checked={aiEmojis}
+                                                onCheckedChange={setAiEmojis}
+                                            />
+                                            <span className="text-[10px] text-muted-foreground">{aiEmojis ? "On" : "Off"}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {aiActiveTab === "image" && (
+                                <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <div className="space-y-1">
+                                        <Label className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Image Style</Label>
+                                        <IconSelect value={aiImageStyle} onValueChange={setAiImageStyle} options={IMAGE_STYLE_OPTIONS} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Aspect Ratio</Label>
+                                        <IconSelect value={aiAspectRatio} onValueChange={setAiAspectRatio} options={ASPECT_RATIO_OPTIONS} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {aiActiveTab === "video" && (
+                                <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <div className="space-y-1">
+                                        <Label className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Aspect Ratio</Label>
+                                        <IconSelect value={aiAspectRatio} onValueChange={setAiAspectRatio} options={ASPECT_RATIO_OPTIONS} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Duration</Label>
+                                        <IconSelect
+                                            value={String(aiVideoDuration)}
+                                            onValueChange={(v) => setAiVideoDuration(parseInt(v))}
+                                            options={VIDEO_DURATION_OPTIONS}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Execution Button */}
+                            {aiActiveTab === "text" ? (
+                                <Button
+                                    type="button"
+                                    disabled={isGeneratingText || !aiKeyStatus[TEXT_MODELS.find(m => m.value === aiModel)?.keyField]}
+                                    onClick={handleTextGenerate}
+                                    className="w-full h-9 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold hover:from-violet-700 hover:to-indigo-700 rounded-xl transition-all shadow-md shadow-violet-200 dark:shadow-none"
+                                >
+                                    {isGeneratingText ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                            AI is copywriting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles className="h-4 w-4 mr-2" />
+                                            Generate AI Description
+                                        </>
+                                    )}
+                                </Button>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    disabled={aiJobStatus === "pending" || aiJobStatus === "processing"}
+                                    onClick={() => handleMediaGenerate(aiActiveTab)}
+                                    className="w-full h-9 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold hover:from-violet-700 hover:to-indigo-700 rounded-xl transition-all shadow-md shadow-violet-200 dark:shadow-none"
+                                >
+                                    {aiJobStatus === "pending" || aiJobStatus === "processing" ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                            Generating Media Job...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles className="h-4 w-4 mr-2" />
+                                            Generate AI {aiActiveTab === "image" ? "Image" : "Video"}
+                                        </>
+                                    )}
+                                </Button>
+                            )}
+
+                            {/* Progressive Loading Status for Async Media Jobs */}
+                            {(aiJobStatus === "pending" || aiJobStatus === "processing") && (
+                                <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-violet-200 dark:border-violet-800 rounded-xl bg-violet-50/20 dark:bg-violet-950/5 animate-pulse mt-2">
+                                    <Loader2 className="h-7 w-7 text-violet-600 dark:text-violet-400 animate-spin mb-2" />
+                                    <span className="text-xs font-semibold text-violet-700 dark:text-violet-300">{aiProgressMessage || "Queueing generation..."}</span>
+                                    <span className="text-[9px] text-muted-foreground mt-1">Non-blocking background runner. It takes about 10–30s.</span>
+                                </div>
+                            )}
+
+                            {/* Image/Video Fail Response display */}
+                            {aiJobStatus === "failed" && aiJobError && (
+                                <div className="p-3 border border-red-100 dark:border-red-950 rounded-xl bg-red-50/50 dark:bg-red-950/10 text-red-600 text-xs flex items-start gap-2 mt-2 animate-in slide-in-from-top-1">
+                                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                                    <div className="space-y-1">
+                                        <p className="font-semibold">AI Generation Blocked</p>
+                                        <p className="opacity-90">{aiJobError}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Generated Results Area */}
+                            {aiActiveTab === "text" && generatedTextResult && (
+                                <div className="mt-4 p-4 border border-violet-100 dark:border-violet-900 rounded-xl bg-violet-50/10 dark:bg-violet-950/5 space-y-3 animate-in slide-in-from-top-2 duration-300">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[10px] font-semibold text-violet-700 dark:text-violet-300 uppercase tracking-widest">Generated Result</span>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            className="h-7 text-[10px] px-2 bg-violet-600 hover:bg-violet-700 text-white font-semibold"
+                                            onClick={() => {
+                                                setCaption(generatedTextResult);
+                                                toast.success("Successfully copied AI caption into post!");
+                                            }}
+                                        >
+                                            <Check className="h-3 w-3 mr-1" /> Insert into Post
+                                        </Button>
+                                    </div>
+                                    <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed font-mono bg-white/50 dark:bg-gray-950/40 p-3 rounded-lg border">
+                                        {generatedTextResult}
+                                    </p>
+                                </div>
+                            )}
+
+                            {aiActiveTab === "image" && aiJobStatus === "completed" && aiJobResult && (
+                                <div className="mt-4 p-4 border border-violet-100 dark:border-violet-900 rounded-xl bg-violet-50/10 dark:bg-violet-950/5 space-y-3 animate-in slide-in-from-top-2 duration-300">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[10px] font-semibold text-violet-700 dark:text-violet-300 uppercase tracking-widest">Generated Image</span>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            className="h-7 text-[10px] px-2 bg-violet-600 hover:bg-violet-700 text-white font-semibold"
+                                            onClick={() => {
+                                                setSelectedMediaIds(prev => {
+                                                    if (prev.some(m => m._id === aiJobResult._id)) return prev;
+                                                    return [...prev, aiJobResult];
+                                                });
+                                                toast.success("AI image added to post media!");
+                                            }}
+                                        >
+                                            <Check className="h-3 w-3 mr-1" /> Add to Post
+                                        </Button>
+                                    </div>
+                                    <div className="aspect-video w-full rounded-lg overflow-hidden border bg-black/10 flex items-center justify-center">
+                                        <img src={aiJobResult.url} alt="Generated AI Graphic" className="h-full w-full object-cover" />
+                                    </div>
+                                </div>
+                            )}
+
+                            {aiActiveTab === "video" && aiJobStatus === "completed" && aiJobResult && (
+                                <div className="mt-4 p-4 border border-violet-100 dark:border-violet-900 rounded-xl bg-violet-50/10 dark:bg-violet-950/5 space-y-3 animate-in slide-in-from-top-2 duration-300">
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-semibold text-violet-700 dark:text-violet-300 uppercase tracking-widest">Generated Video</span>
+                                            {aiJobSource === "generated" ? (
+                                                <Badge className="h-4 px-1.5 text-[9px] font-semibold bg-violet-600 text-white border-none">
+                                                    <Sparkles className="h-2.5 w-2.5 mr-0.5" /> Runway AI
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="outline" className="h-4 px-1.5 text-[9px] font-semibold text-amber-600 border-amber-200 bg-amber-50">
+                                                    <Film className="h-2.5 w-2.5 mr-0.5" /> Stock Match
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            className="h-7 text-[10px] px-2 bg-violet-600 hover:bg-violet-700 text-white font-semibold"
+                                            onClick={() => {
+                                                setSelectedMediaIds(prev => {
+                                                    if (prev.some(m => m._id === aiJobResult._id)) return prev;
+                                                    return [...prev, aiJobResult];
+                                                });
+                                                toast.success("AI video added to post media!");
+                                            }}
+                                        >
+                                            <Check className="h-3 w-3 mr-1" /> Add to Post
+                                        </Button>
+                                    </div>
+                                    <div className="aspect-video w-full rounded-lg overflow-hidden border bg-black/10 flex items-center justify-center">
+                                        <video src={aiJobResult.url} controls className="h-full w-full object-cover" />
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
                     <Card className="h-fit border-none shadow-md bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
                         <CardHeader>
                             <CardTitle className="text-xl">Compose Post</CardTitle>
@@ -972,6 +1544,62 @@ const CreatePost = () => {
                                     Finish Selection
                                 </Button>
                             </div>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Upsell Quota Limit Modal */}
+            <Dialog open={isUpsellModalOpen} onOpenChange={setIsUpsellModalOpen}>
+                <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden border-none shadow-2xl bg-white dark:bg-gray-950">
+                    <div className="bg-gradient-to-br from-violet-600 via-fuchsia-600 to-pink-500 p-8 text-white relative overflow-hidden">
+                        <div className="absolute -right-10 -bottom-10 opacity-10 bg-white size-48 rounded-full pointer-events-none" />
+                        <div className="absolute -left-10 -top-10 opacity-10 bg-white size-32 rounded-full pointer-events-none" />
+                        <div className="rounded-full bg-white/20 p-3 w-fit mb-4 backdrop-blur-md">
+                            <Sparkles className="h-6 w-6 text-yellow-300 animate-bounce" />
+                        </div>
+                        <h2 className="text-2xl font-black tracking-tight leading-snug">AI Credits Exhausted!</h2>
+                        <p className="text-white/80 text-xs mt-2 leading-relaxed">
+                            You have successfully consumed your monthly limit of 30 free AI generations. Upgrade to premium to unleash unlimited content!
+                        </p>
+                    </div>
+                    
+                    <div className="p-6 space-y-6">
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                                <div className="p-1.5 bg-violet-50 dark:bg-violet-950/30 rounded-lg text-primary">
+                                    <Flame className="h-4 w-4 text-violet-600" />
+                                </div>
+                                <span className="text-sm font-bold">500+ Premium Monthly Generations</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="p-1.5 bg-violet-50 dark:bg-violet-950/30 rounded-lg text-primary">
+                                    <Languages className="h-4 w-4 text-violet-600" />
+                                </div>
+                                <span className="text-sm font-bold">Access Advanced Models (Claude 3.5)</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="p-1.5 bg-violet-50 dark:bg-violet-950/30 rounded-lg text-primary">
+                                    <Check className="h-4 w-4 text-violet-600" />
+                                </div>
+                                <span className="text-sm font-bold">Priority Processing speeds</span>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 justify-end pt-2">
+                            <Button type="button" variant="ghost" className="h-10 text-xs" onClick={() => setIsUpsellModalOpen(false)}>
+                                Keep Free Plan
+                            </Button>
+                            <Button 
+                                type="button"
+                                className="h-10 text-xs bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white font-bold shadow-md shadow-violet-200"
+                                onClick={() => {
+                                    setIsUpsellModalOpen(false);
+                                    navigate("/dashboard/settings"); // Or billing settings page
+                                }}
+                            >
+                                Upgrade to Pro <ArrowUpRight className="ml-1 h-3.5 w-3.5" />
+                            </Button>
                         </div>
                     </div>
                 </DialogContent>

@@ -109,6 +109,7 @@ import accountGroupRouter from "./routes/accountGroup.routes.js";
 import superadminRouter from "./routes/superadmin.routes.js";
 import engagementRouter from "./routes/engagement.routes.js";
 import invitationRouter from "./routes/invitation.routes.js";
+import aiRouter from "./routes/ai.routes.js";
 
 // Routes declaration
 app.use("/api/v1/auth", authLimiter, authRouter);
@@ -129,6 +130,7 @@ app.use("/api/v1/facebook", facebookRouter);
 app.use("/api/v1/media", verifyJWT, tenantMiddleware, mediaRouter);
 app.use("/api/v1/audit-logs", verifyJWT, tenantMiddleware, auditLogRouter);
 app.use("/api/v1/usage", verifyJWT, tenantMiddleware, usageRouter);
+app.use("/api/v1/ai", verifyJWT, tenantMiddleware, aiRouter);
 app.use("/api/v1/organization", organizationRouter);
 app.use("/api/v1/rules", verifyJWT, tenantMiddleware, ruleRouter);
 app.use("/api/v1/notifications", verifyJWT, tenantMiddleware, notificationRouter);

@@ -71,6 +71,15 @@ const usageSchema = new Schema(
             type: Date,
             default: () => new Date(0), // Default to epoch to force first-time reset
         },
+        // AI Generations Tracking
+        aiLimit: {
+            type: Number,
+            default: 30,
+        },
+        aiUsed: {
+            type: Number,
+            default: 0,
+        },
     },
     {
         timestamps: true,

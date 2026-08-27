@@ -34,6 +34,10 @@ const _config = {
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI,
+    // Separate redirect URI for the "Connect Google Account" (Gemini) OAuth flow —
+    // must be registered as its own Authorized redirect URI on the same Google
+    // Cloud OAuth client used for GOOGLE_REDIRECT_URI above.
+    GOOGLE_GEMINI_REDIRECT_URI: process.env.GOOGLE_GEMINI_REDIRECT_URI,
     BACKEND_URL: process.env.BACKEND_URL || "http://localhost:8000",
     FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:5173",
     RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
@@ -41,6 +45,10 @@ const _config = {
     RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    RUNWAY_API_KEY: process.env.RUNWAY_API_KEY,
     NODE_ENV: process.env.NODE_ENV || "development",
 };
 

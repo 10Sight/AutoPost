@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -18,7 +18,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
+import { ThemeToggle } from "../../components/ui/theme-toggle";
 import { logOut, selectCurrentUser } from "../../features/auth/authSlice";
 import { useLogoutMutation } from "../../features/auth/authApi";
 import { useGetOrganizationQuery } from "../../redux/slices/organizationApiSlice";
@@ -32,7 +32,6 @@ import {
     LogOut,
     Menu,
     ChevronRight,
-    Search,
     Download,
     Laptop2,
     PenSquare,
@@ -48,6 +47,14 @@ import { toast } from "sonner";
 import NotificationBell from "../common/NotificationBell";
 import ImpersonationBanner from "./ImpersonationBanner";
 import SuspendedScreen from "../common/SuspendedScreen";
+
+const getInitials = (name) => {
+    if (!name) return "U";
+    const parts = name.trim().split(/\s+/);
+    const first = parts[0]?.[0] || "";
+    const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+    return (first + last).toUpperCase();
+};
 
 const baseTabs = [
     { link: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -80,6 +87,67 @@ const AppLayout = () => {
     const isSuspended = !isOrgLoading && organization && organization.status !== "active" && user?.role !== "superadmin";
     const branding = organization?.branding || {};
     const primaryColor = branding.primaryColor || "#2563eb"; // Fallback to blue-600
+
+    // Tabs actually rendered in the sidebar (role-filtered)
+    const visibleTabs = useMemo(
+        () =>
+            baseTabs.filter((item) => {
+                if (
+                    ["/dashboard/org-settings", "/dashboard/policy-rules"].includes(item.link) &&
+                    user?.role !== "admin"
+                ) {
+                    return false;
+                }
+                return true;
+            }),
+        [user?.role]
+    );
+
+    const activeTab = useMemo(
+        () =>
+            visibleTabs.find(
+                (item) =>
+                    pathname === item.link ||
+                    (item.link !== "/dashboard" && pathname.startsWith(item.link))
+            ),
+        [visibleTabs, pathname]
+    );
+
+    // Sliding active-tab indicator
+    const navRef = useRef(null);
+    const tabRefs = useRef({});
+    const [indicatorStyle, setIndicatorStyle] = useState({ top: 0, left: 0, width: 0, height: 0, opacity: 0 });
+
+    const updateIndicator = useCallback(() => {
+        const activeEl = activeTab ? tabRefs.current[activeTab.link] : null;
+        const navEl = navRef.current;
+        if (!activeEl || !navEl) {
+            setIndicatorStyle((prev) => ({ ...prev, opacity: 0 }));
+            return;
+        }
+        const navRect = navEl.getBoundingClientRect();
+        const elRect = activeEl.getBoundingClientRect();
+        const inset = 4;
+        setIndicatorStyle({
+            top: elRect.top - navRect.top + inset,
+            left: elRect.left - navRect.left + inset,
+            width: elRect.width - inset * 2,
+            height: elRect.height - inset * 2,
+            opacity: 1,
+        });
+    }, [activeTab]);
+
+    useLayoutEffect(() => {
+        updateIndicator();
+    }, [updateIndicator, collapsed]);
+
+    useEffect(() => {
+        const navEl = navRef.current;
+        if (!navEl) return undefined;
+        const observer = new ResizeObserver(() => updateIndicator());
+        observer.observe(navEl);
+        return () => observer.disconnect();
+    }, [updateIndicator]);
 
     // Update page name based on current route
     useEffect(() => {
@@ -192,48 +260,62 @@ const AppLayout = () => {
                 </div>
 
                 {/* Sidebar Tabs */}
-                <div className="px-3 flex flex-col w-full py-6 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-hide max-h-[calc(100vh-12rem)]">
-                    {baseTabs.map((item) => {
-                        // Hide Admin-only tabs
-                        if (["/dashboard/org-settings", "/dashboard/policy-rules"].includes(item.link) && user?.role !== "admin") {
-                            return null;
-                        }
+                <div
+                    ref={navRef}
+                    className="relative px-3 flex flex-col w-full py-6 gap-1 overflow-y-auto overflow-x-hidden scrollbar-hide max-h-[calc(100vh-12rem)]"
+                >
+                    {/* Sliding active-tab indicator */}
+                    <div
+                        className="absolute top-0 left-0 rounded-xl bg-primary/5 dark:bg-primary/10 border border-primary/30 dark:border-primary/40 transition-[transform,width,height,opacity] duration-300 ease-out will-change-transform pointer-events-none"
+                        style={{
+                            transform: `translate(${indicatorStyle.left}px, ${indicatorStyle.top}px)`,
+                            width: indicatorStyle.width,
+                            height: indicatorStyle.height,
+                            opacity: indicatorStyle.opacity,
+                        }}
+                    />
 
-                        const isActive =
-                            pathname === item.link ||
-                            (item.link === "/dashboard" && pathname === "/dashboard") ||
-                            (item.link !== "/dashboard" && pathname.startsWith(item.link));
+                    {visibleTabs.map((item) => {
+                        const isActive = activeTab?.link === item.link;
 
                         return (
                             <div
-                                className={`group relative flex items-center cursor-pointer w-full overflow-hidden h-12 rounded-xl transition-all duration-300 hover:scale-[1.02]
-                ${isActive
-                                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                                        : "text-[#4b5563] dark:text-gray-400 hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary hover:shadow-md"
-                                    }
-                ${collapsed ? "justify-center mx-1" : "items-center px-4"}`}
+                                ref={(el) => {
+                                    tabRefs.current[item.link] = el;
+                                }}
+                                className={cn(
+                                    "group relative z-10 flex items-center cursor-pointer w-full overflow-hidden h-12 rounded-xl transition-colors duration-200",
+                                    isActive
+                                        ? "text-primary dark:text-white font-semibold"
+                                        : "text-slate-500 dark:text-slate-400 font-medium hover:text-primary dark:hover:text-primary hover:bg-slate-100/40 dark:hover:bg-slate-800/20",
+                                    collapsed ? "justify-center mx-1" : "items-center px-4"
+                                )}
                                 key={item.label}
                                 onClick={() => {
                                     navigate(item.link);
                                     if (isMobile) setCollapsed(true);
                                 }}
                             >
-                                {isActive && !collapsed && (
-                                    <div className="absolute left-0 top-0 h-full w-1 bg-[#ffffff] rounded-r-full" />
+                                {collapsed && isActive ? (
+                                    <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
+                                        <item.icon className="w-6 h-6 text-white" strokeWidth={2.5} />
+                                    </div>
+                                ) : (
+                                    <item.icon
+                                        className={collapsed ? "w-5 h-5" : "min-w-5 min-h-5"}
+                                        strokeWidth={isActive ? 2.5 : 1.75}
+                                    />
                                 )}
-                                <item.icon
-                                    className={`${collapsed ? "w-5 h-5" : "min-w-5 min-h-5"
-                                        } transition-transform group-hover:scale-110`}
-                                    strokeWidth={isActive ? 2.5 : 1.5}
-                                />
                                 {!collapsed && (
-                                    <span className="ml-3 text-sm font-medium transition-all group-hover:translate-x-0.5">
+                                    <span className="ml-3 text-sm truncate">
                                         {item.label}
                                     </span>
                                 )}
                                 {!collapsed && (
-                                    <div className={`ml-auto opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? 'text-[#bfdbfe]' : 'text-[#9ca3af]'
-                                        }`}>
+                                    <div className={cn(
+                                        "ml-auto opacity-0 group-hover:opacity-100 transition-opacity",
+                                        isActive ? "text-primary dark:text-white" : "text-slate-400"
+                                    )}>
                                         <ChevronRight className="w-4 h-4" />
                                     </div>
                                 )}
@@ -285,7 +367,7 @@ const AppLayout = () => {
                             variant="ghost"
                             size="icon"
                             onClick={() => setCollapsed(!collapsed)}
-                            className="text-[#64748b] dark:text-gray-400 hover:bg-[#f1f5f9] dark:hover:bg-gray-800 rounded-xl"
+                            className="cursor-pointer text-[#64748b] dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
                         >
                             <Menu className="h-5 w-5" />
                         </Button>
@@ -296,13 +378,13 @@ const AppLayout = () => {
                             <Breadcrumb>
                                 <BreadcrumbList>
                                     <BreadcrumbItem>
-                                        <Link to="/dashboard" className="text-[10px] sm:text-xs font-bold text-[#94a3b8] hover:text-[#2563eb] transition-colors flex items-center gap-1">
+                                        <Link to="/dashboard" className="text-xs sm:text-sm font-medium text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary transition-colors flex items-center gap-1">
                                             <Home className="w-3 h-3" /> PRIORITIZE
                                         </Link>
                                     </BreadcrumbItem>
                                     <BreadcrumbSeparator />
                                     <BreadcrumbItem>
-                                        <BreadcrumbPage className="text-[10px] sm:text-xs font-black text-[#1e293b] dark:text-white uppercase tracking-wider">{pageName}</BreadcrumbPage>
+                                        <BreadcrumbPage className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">{pageName}</BreadcrumbPage>
                                     </BreadcrumbItem>
                                 </BreadcrumbList>
                             </Breadcrumb>
@@ -310,41 +392,15 @@ const AppLayout = () => {
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-6">
-                        {/* Global Search - Hidden on small mobile */}
-                        <div className="hidden md:flex relative group">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94a3b8] group-focus-within:text-[#2563eb] transition-colors" />
-                            <input
-                                type="text"
-                                placeholder="Global search..."
-                                className="w-40 xl:w-64 h-10 pl-10 pr-4 bg-[#f8fafc] dark:bg-gray-900 border border-[#e2e8f0] dark:border-gray-800 rounded-xl text-sm transition-all focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-                            />
-                        </div>
-
                         <div className="flex items-center gap-2 sm:gap-3">
                             <NotificationBell />
 
+                            <ThemeToggle />
+
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <div className="flex items-center gap-2 sm:gap-3 p-1 sm:pr-3 rounded-full hover:bg-[#f1f5f9] dark:hover:bg-gray-800 cursor-pointer transition-all border border-[#f1f5f9] dark:border-gray-800">
-                                        <Avatar className="h-8 w-8 sm:h-9 sm:h-9 border-2 border-white dark:border-gray-700 shadow-sm">
-                                            <AvatarImage
-                                                src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || "U")}&background=random`}
-                                                className="object-cover"
-                                            />
-                                            <AvatarFallback className="font-bold text-xs sm:text-sm bg-[#2563eb] text-white">
-                                                {user?.name?.[0] || "U"}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        {!isMobile && (
-                                            <div className="flex flex-col">
-                                                <span className="text-xs font-black text-[#1e293b] dark:text-gray-100 leading-none mb-1 capitalize truncate max-w-[100px]">
-                                                    {user?.name}
-                                                </span>
-                                                <span className="text-[10px] font-bold text-blue-600 leading-none uppercase tracking-tighter">
-                                                    {user?.role}
-                                                </span>
-                                            </div>
-                                        )}
+                                    <div className="flex items-center justify-center h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-primary text-primary-foreground font-bold text-xs sm:text-sm border-2 border-white dark:border-gray-700 shadow-sm cursor-pointer transition-all hover:opacity-90">
+                                        {getInitials(user?.name)}
                                     </div>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-56 mt-2 rounded-2xl p-2 border-[#f1f5f9] dark:border-gray-800 shadow-2xl">
@@ -352,6 +408,7 @@ const AppLayout = () => {
                                         <div className="flex flex-col">
                                             <span className="text-sm font-black text-[#1e293b]">{user?.name}</span>
                                             <span className="text-xs text-[#64748b]">{user?.email}</span>
+                                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tighter mt-1">{user?.role}</span>
                                         </div>
                                     </DropdownMenuLabel>
                                     <DropdownMenuSeparator />

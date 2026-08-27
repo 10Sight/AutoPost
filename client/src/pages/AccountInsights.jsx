@@ -138,27 +138,21 @@ const AccountInsights = () => {
                     value={parseInt(followerCount || 0)}
                     icon={Users}
                     description="Channel followers/subscribers"
-                    iconBgColor="bg-blue-100 dark:bg-blue-900/20"
                     iconColor="text-blue-600 dark:text-blue-400"
-                    borderColor="border-gray-200 dark:border-gray-800"
                 />
                 <StatCard
                     title="Posts Published"
                     value={realStats.published}
                     icon={CheckCircle2}
                     description="Success rate lifetime"
-                    iconBgColor="bg-green-100 dark:bg-green-900/20"
                     iconColor="text-green-600 dark:text-green-400"
-                    borderColor="border-gray-200 dark:border-gray-800"
                 />
                 <StatCard
                     title="Global Activity"
                     value={realStats.total}
                     icon={Activity}
                     description="Total content tracked"
-                    iconBgColor="bg-orange-100 dark:bg-orange-900/20"
                     iconColor="text-orange-600 dark:text-orange-400"
-                    borderColor="border-gray-200 dark:border-gray-800"
                 />
             </div>
 

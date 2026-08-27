@@ -28,6 +28,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "../components/ui/select";
+import GroupFilter from "../components/common/GroupFilter";
 import SocialAccountStatCard from "../components/dashboard/SocialAccountStatCard";
 
 const Analytics = () => {
@@ -139,19 +140,12 @@ const Analytics = () => {
                     </h2>
                     <div className="flex flex-col sm:flex-row items-center gap-3 mt-2 md:mt-1">
                         <p className="text-sm text-muted-foreground text-center md:text-left">Real-time performance metrics</p>
-                        <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
-                            <SelectTrigger className="w-full sm:w-[180px] h-8 text-[10px] font-bold uppercase tracking-wider bg-transparent border-primary/20 hover:border-primary/50 transition-all rounded-full px-4">
-                                <SelectValue placeholder="All Groups" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-950/95 shadow-2xl">
-                                <SelectItem value="all" className="text-[10px] font-bold uppercase tracking-widest">All Accounts</SelectItem>
-                                {groupsData?.data?.map((group) => (
-                                    <SelectItem key={group._id} value={group._id} className="text-[10px] font-bold uppercase tracking-widest">
-                                        {group.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <GroupFilter
+                            selectedGroup={selectedGroupId}
+                            setSelectedGroup={setSelectedGroupId}
+                            globalLabel="All Accounts"
+                            containerClassName="w-full sm:w-[180px]"
+                        />
                     </div>
                 </div>
                 <div className="flex items-center justify-center gap-3 bg-white dark:bg-gray-900 p-1.5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm w-fit mx-auto md:mx-0">

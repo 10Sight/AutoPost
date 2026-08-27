@@ -3,9 +3,9 @@ import { apiSlice } from "../../app/api";
 export const scheduledPostApiSlice = apiSlice.injectEndpoints({
     endpoints: (builder) => ({
         getScheduledPosts: builder.query({
-            query: ({ page = 1, limit = 10, status, socialAccountId, groupId, platform, search, startDate, endDate } = {}) => ({
+            query: ({ page = 1, limit = 10, status, socialAccountId, groupId, platform, search, startDate, endDate, sort } = {}) => ({
                 url: "/scheduled-posts",
-                params: { page, limit, status, socialAccountId, groupId, platform, search, startDate, endDate },
+                params: { page, limit, status, socialAccountId, groupId, platform, search, startDate, endDate, sort },
             }),
             providesTags: ["ScheduledPost"],
         }),
@@ -18,9 +18,9 @@ export const scheduledPostApiSlice = apiSlice.injectEndpoints({
             invalidatesTags: ["ScheduledPost"],
         }),
         getDashboardStats: builder.query({
-            query: ({ groupId } = {}) => ({
+            query: ({ groupId, days } = {}) => ({
                 url: "/scheduled-posts/stats",
-                params: { groupId },
+                params: { groupId, days },
             }),
             providesTags: ["ScheduledPost"],
         }),

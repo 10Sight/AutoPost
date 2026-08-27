@@ -13,7 +13,6 @@ const getOrganizationDetails = asyncHandler(async (req, res) => {
     return res
         .status(200)
         .json(new ApiResponse(200, organization, "Organization details fetched successfully"));
-    Base - Update - Org - Settings - Here
 });
 
 const updateOrganizationBranding = asyncHandler(async (req, res) => {
@@ -53,7 +52,7 @@ const getPublicBranding = asyncHandler(async (req, res) => {
         return res.status(200).json(new ApiResponse(200, {
             name: "Auto Posting",
             branding: {
-                primaryColor: "#000000",
+                primaryColor: "#2563eb",
                 logo: ""
             }
         }, "Default branding returned"));

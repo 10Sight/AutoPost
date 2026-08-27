@@ -51,15 +51,7 @@ const MediaGridSkeleton = () => (
     </div>
 );
 
-import { useGetGroupsQuery } from "../features/accountGroups/accountGroupsApi";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "../components/ui/select";
-import { Filter } from "lucide-react";
+import GroupFilter from "../components/common/GroupFilter";
 
 const MediaLibrary = () => {
     const navigate = useNavigate();
@@ -72,8 +64,6 @@ const MediaLibrary = () => {
     const [limit] = useState(24);
     const [searchTerm, setSearchTerm] = useState("");
     const [activeTab, setActiveTab] = useState("all");
-    
-    const { data: groupsData } = useGetGroupsQuery();
 
     useEffect(() => {
         localStorage.setItem("lastSelectedMediaGroup", selectedGroup);
@@ -252,32 +242,12 @@ const MediaLibrary = () => {
                         </p>
                     </div>
 
-                    {/* Group Filter Selector - Refined Premium Design */}
-                    <div className="flex items-center justify-center gap-2 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-md p-1.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60 shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/30 group/select md:ml-4 w-fit mx-auto md:mx-0">
-                        <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-                            <SelectTrigger className="w-[160px] md:w-[180px] h-8 border-none bg-transparent text-xs font-semibold text-slate-600 dark:text-slate-400 focus:ring-0 transition-colors group-hover/select:text-primary">
-                                <div className="flex items-center">
-                                    <Filter className="h-3.5 w-3.5 mr-2.5 text-primary/60 group-hover/select:text-primary transition-colors" />
-                                    <SelectValue placeholder="Select Group" />
-                                </div>
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-                                <SelectItem value="all" className="text-xs font-semibold text-slate-500 hover:text-primary transition-colors cursor-pointer rounded-lg mx-1">
-                                    Global Assets
-                                </SelectItem>
-                                <div className="h-px bg-slate-100 dark:bg-slate-800 my-1 mx-2" />
-                                {groupsData?.data?.map((group) => (
-                                    <SelectItem 
-                                        key={group._id} 
-                                        value={group._id} 
-                                        className="text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-primary transition-colors cursor-pointer rounded-lg mx-1"
-                                    >
-                                        {group.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    <GroupFilter
+                        selectedGroup={selectedGroup}
+                        setSelectedGroup={setSelectedGroup}
+                        globalLabel="Global Assets"
+                        containerClassName="md:ml-4 w-[160px] md:w-[180px] mx-auto md:mx-0"
+                    />
                 </div>
                 <div className="w-full xl:w-auto flex justify-center xl:justify-end">
                     <MediaUploader 

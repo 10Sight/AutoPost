@@ -13,7 +13,7 @@ import { MEDIA_RULES } from "../utils/mediaRules.js";
 import { validateLimit, updateUsage } from "../services/usage.service.js";
 import { Media } from "../models/media.model.js";
 import { evaluateRules } from "../services/ruleEngine.service.js";
-import { getFilteredPosts, getPostStatsSummary } from "../services/post.service.js";
+import { getFilteredPosts, getPostStatsSummary, buildDailySeries, getPlatformTotals, calculateGrowth, PLATFORMS } from "../services/post.service.js";
 import mongoose from "mongoose";
 import { logger } from "../utils/logger.js";
 import { AccountGroup } from "../models/accountGroup.model.js";
@@ -414,7 +414,8 @@ const getScheduledPosts = asyncHandler(async (req, res) => {
         platform,
         search,
         startDate,
-        endDate
+        endDate,
+        sort
     } = req.query;
 
     // Delegate all business logic and query construction to the service layer
@@ -429,7 +430,8 @@ const getScheduledPosts = asyncHandler(async (req, res) => {
         startDate,
         endDate,
         page,
-        limit
+        limit,
+        sort
     });
 
     return res
@@ -486,7 +488,10 @@ const deleteScheduledPost = asyncHandler(async (req, res) => {
 
 const getDashboardStats = asyncHandler(async (req, res) => {
     const organizationId = req.user.organizationId;
-    const { groupId } = req.query;
+    const { groupId, days } = req.query;
+
+    // Clamp to sane bounds so an arbitrary query value can't trigger a huge scan/loop
+    const daysLimit = Math.min(Math.max(parseInt(days) || 7, 1), 90);
 
     const matchId = (id) => (typeof id === "string" && mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id);
     const matchQuery = { organizationId: matchId(organizationId) };
@@ -511,11 +516,12 @@ const getDashboardStats = asyncHandler(async (req, res) => {
                 return res.status(200).json(
                     new ApiResponse(
                         200, 
-                        { 
-                            stats: { total: 0, pending: 0, posted: 0, failed: 0 }, 
-                            chartData: [], 
-                            platformDistribution: [] 
-                        }, 
+                        {
+                            stats: { total: 0, pending: 0, posted: 0, failed: 0 },
+                            chartData: [],
+                            platformDistribution: [],
+                            platformStats: []
+                        },
                         "Group has no accounts."
                     )
                 );
@@ -565,57 +571,10 @@ const getDashboardStats = asyncHandler(async (req, res) => {
         stats.total += item.count;
     });
 
-    // 2. Get daily activity for the last 7 days
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    sevenDaysAgo.setHours(0, 0, 0, 0);
+    // 2. Get daily activity for the requested window (defaults to 7 days)
+    const chartData = await buildDailySeries(matchQuery, daysLimit);
 
-    const dailyActivity = await ScheduledPost.aggregate([
-        {
-            $match: {
-                ...matchQuery,
-                scheduledAt: { $gte: sevenDaysAgo },
-            },
-        },
-        {
-            $group: {
-                _id: {
-                    date: { $dateToString: { format: "%Y-%m-%d", date: "$scheduledAt" } },
-                    platform: "$platform"
-                },
-                count: { $sum: 1 },
-            },
-        },
-        { $sort: { "_id.date": 1 } },
-    ]);
-
-    // Fill in missing days and platforms
-    const platforms = ["instagram", "facebook", "linkedin", "x", "youtube"];
-    const chartData = [];
-    for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dateString = d.toISOString().split("T")[0];
-        const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
-
-        const dayStats = {
-            name: dayName,
-            date: dateString,
-            total: 0
-        };
-
-        // Add counts for each platform
-        platforms.forEach(platform => {
-            const found = dailyActivity.find(item => item._id.date === dateString && item._id.platform === platform);
-            const count = found ? found.count : 0;
-            dayStats[platform] = count;
-            dayStats.total += count;
-        });
-
-        chartData.push(dayStats);
-    }
-
-    // 3. Platform Distribution
+    // 3. Platform Distribution (all-time, for the pie/legacy consumers)
     const platformDistribution = await ScheduledPost.aggregate([
         { $match: matchQuery },
         {
@@ -627,13 +586,36 @@ const getDashboardStats = asyncHandler(async (req, res) => {
         { $project: { name: "$_id", value: "$count", _id: 0 } }
     ]);
 
+    // 4. Platform Performance: current-window totals vs. the equally-sized
+    // window immediately before it, to derive a period-over-period growth %.
+    const windowEnd = new Date();
+    windowEnd.setHours(0, 0, 0, 0);
+    windowEnd.setDate(windowEnd.getDate() + 1); // exclusive upper bound covering "today"
+    const windowStart = new Date(windowEnd);
+    windowStart.setDate(windowStart.getDate() - daysLimit);
+    const previousWindowStart = new Date(windowStart);
+    previousWindowStart.setDate(previousWindowStart.getDate() - daysLimit);
+
+    const previousTotals = await getPlatformTotals(matchQuery, previousWindowStart, windowStart);
+
+    const platformStats = PLATFORMS.map((platform) => {
+        const count = chartData.reduce((sum, day) => sum + (day[platform] || 0), 0);
+        const previous = previousTotals[platform] || 0;
+        return {
+            platform,
+            count,
+            growth: calculateGrowth(count, previous),
+        };
+    });
+
     return res.status(200).json(
         new ApiResponse(
             200,
             {
                 stats,
                 chartData,
-                platformDistribution
+                platformDistribution,
+                platformStats
             },
             "Dashboard stats fetched successfully"
         )
@@ -709,61 +691,7 @@ const getAnalytics = asyncHandler(async (req, res) => {
     ]);
 
     // 3. Weekly Volume Comparison
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - (days - 1));
-    startDate.setHours(0, 0, 0, 0);
-
-    const volumeMatch = { 
-        ...matchQuery, 
-        scheduledAt: { $gte: startDate } 
-    };
-
-    const dailyVolume = await ScheduledPost.aggregate([
-        { $match: volumeMatch },
-        {
-            $group: {
-                _id: {
-                    date: { $dateToString: { format: "%Y-%m-%d", date: "$scheduledAt" } },
-                    platform: "$platform"
-                },
-                count: { $sum: 1 },
-            },
-        },
-        { $sort: { "_id.date": 1 } },
-    ]);
-
-    // Fill missing days and platforms
-    const platforms = ["instagram", "facebook", "linkedin", "x", "youtube"];
-    const volumeData = [];
-
-    // Use the start of today as the reference point
-    const baseDate = new Date();
-    baseDate.setHours(0, 0, 0, 0);
-
-    for (let i = (days - 1); i >= 0; i--) {
-        const d = new Date(baseDate);
-        d.setDate(d.getDate() - i);
-
-        // MongoDB $dateToString in UTC format: YYYY-MM-DD
-        const dateString = d.toISOString().split("T")[0];
-        const dayOfMonth = d.getDate();
-
-        const dayStats = {
-            date: dateString,
-            day: dayOfMonth,
-            posts: 0
-        };
-
-        // Add counts for each platform
-        platforms.forEach(platform => {
-            const found = dailyVolume.find(item => item._id.date === dateString && item._id.platform === platform);
-            const count = found ? found.count : 0;
-            dayStats[platform] = count;
-            dayStats.posts += count;
-        });
-
-        volumeData.push(dayStats);
-    }
+    const volumeData = await buildDailySeries(matchQuery, days, { totalKey: "posts" });
 
     return res.status(200).json(
         new ApiResponse(

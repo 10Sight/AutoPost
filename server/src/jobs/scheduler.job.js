@@ -1,7 +1,29 @@
 import cron from "node-cron";
 import { ScheduledPost } from "../models/scheduledPost.model.js";
+import { AIJob } from "../models/aiJob.model.js";
 import { logger } from "../utils/logger.js";
 import { processPost } from "./post.processor.js";
+
+const AI_JOB_STALE_MINUTES = 10;
+
+// AI generation jobs run as fire-and-forget in-process async workers (no durable
+// queue). If the server restarts mid-generation, or a call hangs past its own
+// axios timeout, the job's DB row is orphaned at "pending"/"processing" forever
+// and the client's status poll spins indefinitely. This sweep releases those.
+const runAiJobCleanup = async () => {
+    try {
+        const staleCutoff = new Date(Date.now() - AI_JOB_STALE_MINUTES * 60 * 1000);
+        const result = await AIJob.updateMany(
+            { status: { $in: ["pending", "processing"] }, updatedAt: { $lt: staleCutoff } },
+            { $set: { status: "failed", error: "Generation timed out. Please try again." } }
+        );
+        if (result.modifiedCount > 0) {
+            logger.warn(`[AI Cleanup] Reset ${result.modifiedCount} stale AI job(s) to failed.`);
+        }
+    } catch (error) {
+        logger.error("Error in AI job cleanup sweep:", error);
+    }
+};
 
 const runScheduler = async () => {
     logger.info("Running scheduled posts trigger...");
@@ -57,6 +79,12 @@ const initScheduler = () => {
         runScheduler();
     });
     logger.info("Scheduler initialized (interval: 1 minute).");
+
+    // Run every 5 minutes
+    cron.schedule("*/5 * * * *", () => {
+        runAiJobCleanup();
+    });
+    logger.info("AI job cleanup sweep initialized (interval: 5 minutes).");
 };
 
 export { initScheduler };

@@ -23,12 +23,41 @@ export const getOrCreateUsage = async (organizationId) => {
             postsLimit: org?.quota?.maxPostsPerMonth || 100,
             platformsLimit: org?.quota?.maxAccounts || 5,
             platformsUsed: actualPlatformsCount, // Use real count on creation
-            storageLimitBytes: (org?.quota?.storageLimitGB || 1) * 1024 * 1024 * 1024
+            storageLimitBytes: (org?.quota?.storageLimitGB || 1) * 1024 * 1024 * 1024,
+            aiLimit: org?.quota?.maxAiGenerationsPerMonth || 30
         });
     } else if (needsPlatformsResync) {
         usage.platformsUsed = actualPlatformsCount;
         await usage.save();
         logger.info(`[Usage] Resynced platforms count for Organization: ${organizationId}. New count: ${actualPlatformsCount}`);
+    }
+
+    // Mid-cycle Quota Synchronization Hook
+    const org = await Organization.findById(organizationId);
+    if (org) {
+        let changed = false;
+        const expectedStorageBytes = (org.quota?.storageLimitGB || 1) * 1024 * 1024 * 1024;
+        
+        if (usage.aiLimit !== org.quota?.maxAiGenerationsPerMonth) {
+            usage.aiLimit = org.quota?.maxAiGenerationsPerMonth || 30;
+            changed = true;
+        }
+        if (usage.postsLimit !== org.quota?.maxPostsPerMonth) {
+            usage.postsLimit = org.quota?.maxPostsPerMonth || 100;
+            changed = true;
+        }
+        if (usage.platformsLimit !== org.quota?.maxAccounts) {
+            usage.platformsLimit = org.quota?.maxAccounts || 5;
+            changed = true;
+        }
+        if (usage.storageLimitBytes !== expectedStorageBytes) {
+            usage.storageLimitBytes = expectedStorageBytes;
+            changed = true;
+        }
+        if (changed) {
+            await usage.save();
+            logger.info(`[Usage] Synchronized plan quotas mid-cycle for Organization: ${organizationId}`);
+        }
     }
 
     // Check for cycle reset
@@ -40,6 +69,7 @@ export const getOrCreateUsage = async (organizationId) => {
 
         // Reset monthly metrics
         usage.postsUsed = 0;
+        usage.aiUsed = 0;
         await usage.save();
         logger.info(`[Usage] Monthly cycle reset for Organization: ${organizationId}`);
     }
@@ -93,6 +123,11 @@ export const validateLimit = async (organizationId, metric, amount = 1) => {
                 throw new ApiError(403, "Team member limit reached for your organization. Please upgrade your plan.");
             }
             break;
+        case 'ai':
+            if (usage.aiUsed + amount > usage.aiLimit) {
+                throw new ApiError(403, "Monthly AI generation limit reached for your organization. Please upgrade your plan.");
+            }
+            break;
         default:
             break;
     }
@@ -107,7 +142,8 @@ export const updateUsage = async (organizationId, metric, amount = 1, type = 'in
     const field = metric === 'posts' ? 'postsUsed'
         : metric === 'platforms' ? 'platformsUsed'
             : metric === 'storage' ? 'storageUsedBytes'
-                : metric === 'team' ? 'teamUsed' : null;
+                : metric === 'team' ? 'teamUsed'
+                    : metric === 'ai' ? 'aiUsed' : null;
 
     if (!field) return;
 

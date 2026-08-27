@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useMemo, useCallback, useEffect, useLayoutEffect } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { 
     LayoutDashboard, 
@@ -20,6 +20,33 @@ import { Input } from "../../components/ui/input";
 import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../../features/auth/authSlice";
 
+const navItems = [
+    {
+        title: "Organizations",
+        icon: Building2,
+        path: "/admin-panel/organizations",
+        description: "Manage client tenants & authority"
+    },
+    {
+        title: "Platform Health",
+        icon: ShieldAlert,
+        path: "/admin-panel/health",
+        description: "Live diagnostics & failure feed"
+    },
+    {
+        title: "Growth Metrics",
+        icon: TrendingUp,
+        path: "/admin-panel/analytics",
+        description: "Overall system scale & usage"
+    },
+    {
+        title: "Workspace Branding",
+        icon: Palette,
+        path: "/admin-panel/branding",
+        description: "Global identity & visual theme"
+    },
+];
+
 const SuperadminLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -27,7 +54,7 @@ const SuperadminLayout = () => {
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
     const user = useSelector(selectCurrentUser);
 
-    React.useEffect(() => {
+    useEffect(() => {
         const handleResize = () => {
             const mobile = window.innerWidth < 1024;
             setIsMobile(mobile);
@@ -38,32 +65,46 @@ const SuperadminLayout = () => {
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
-    const navItems = [
-        { 
-            title: "Organizations", 
-            icon: Building2, 
-            path: "/admin-panel/organizations",
-            description: "Manage client tenants & authority" 
-        },
-        { 
-            title: "Platform Health", 
-            icon: ShieldAlert, 
-            path: "/admin-panel/health",
-            description: "Live diagnostics & failure feed" 
-        },
-        { 
-            title: "Growth Metrics", 
-            icon: TrendingUp, 
-            path: "/admin-panel/analytics",
-            description: "Overall system scale & usage" 
-        },
-        { 
-            title: "Workspace Branding", 
-            icon: Palette, 
-            path: "/admin-panel/branding",
-            description: "Global identity & visual theme" 
-        },
-    ];
+    const activeItem = useMemo(
+        () => navItems.find((item) => location.pathname.startsWith(item.path)),
+        [location.pathname]
+    );
+
+    // Sliding active-tab indicator
+    const navRef = useRef(null);
+    const tabRefs = useRef({});
+    const [indicatorStyle, setIndicatorStyle] = useState({ top: 0, left: 0, width: 0, height: 0, opacity: 0 });
+
+    const updateIndicator = useCallback(() => {
+        const activeEl = activeItem ? tabRefs.current[activeItem.path] : null;
+        const navEl = navRef.current;
+        if (!activeEl || !navEl) {
+            setIndicatorStyle((prev) => ({ ...prev, opacity: 0 }));
+            return;
+        }
+        const navRect = navEl.getBoundingClientRect();
+        const elRect = activeEl.getBoundingClientRect();
+        const inset = 4;
+        setIndicatorStyle({
+            top: elRect.top - navRect.top + inset,
+            left: elRect.left - navRect.left + inset,
+            width: elRect.width - inset * 2,
+            height: elRect.height - inset * 2,
+            opacity: 1,
+        });
+    }, [activeItem]);
+
+    useLayoutEffect(() => {
+        updateIndicator();
+    }, [updateIndicator, isSidebarOpen]);
+
+    useEffect(() => {
+        const navEl = navRef.current;
+        if (!navEl) return undefined;
+        const observer = new ResizeObserver(() => updateIndicator());
+        observer.observe(navEl);
+        return () => observer.disconnect();
+    }, [updateIndicator]);
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex font-sans overflow-x-hidden">
@@ -99,26 +140,50 @@ const SuperadminLayout = () => {
                         )}
                     </div>
 
-                    <nav className="flex-1 space-y-2">
+                    <nav ref={navRef} className="relative flex-1 flex flex-col gap-2">
+                        {/* Sliding active-tab indicator */}
+                        <div
+                            className="absolute top-0 left-0 rounded-2xl bg-primary/5 dark:bg-primary/10 border border-primary/30 dark:border-primary/40 transition-[transform,width,height,opacity] duration-300 ease-out will-change-transform pointer-events-none"
+                            style={{
+                                transform: `translate(${indicatorStyle.left}px, ${indicatorStyle.top}px)`,
+                                width: indicatorStyle.width,
+                                height: indicatorStyle.height,
+                                opacity: indicatorStyle.opacity,
+                            }}
+                        />
+
                         {navItems.map((item) => {
-                            const isActive = location.pathname.startsWith(item.path);
+                            const isActive = activeItem?.path === item.path;
                             return (
                                 <Link
                                     key={item.path}
+                                    ref={(el) => {
+                                        tabRefs.current[item.path] = el;
+                                    }}
                                     to={item.path}
                                     onClick={() => isMobile && setIsSidebarOpen(false)}
                                     className={cn(
-                                        "flex items-center gap-3 p-3 rounded-2xl transition-all group",
-                                        isActive 
-                                            ? "bg-primary text-white shadow-xl shadow-primary/20" 
-                                            : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50"
+                                        "relative z-10 flex items-center gap-3 p-3 rounded-2xl transition-colors duration-200 group",
+                                        isActive
+                                            ? "text-primary dark:text-white font-semibold"
+                                            : "text-slate-500 dark:text-slate-400 font-medium hover:text-primary dark:hover:text-primary hover:bg-slate-100/40 dark:hover:bg-slate-800/20",
+                                        !isSidebarOpen && "justify-center"
                                     )}
                                 >
-                                    <item.icon className={cn("w-5 h-5 min-w-[20px]", isActive ? "text-white" : "group-hover:text-primary")} />
+                                    {!isSidebarOpen && isActive ? (
+                                        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
+                                            <item.icon className="w-6 h-6 text-white" strokeWidth={2.5} />
+                                        </div>
+                                    ) : (
+                                        <item.icon className="w-5 h-5 min-w-[20px]" strokeWidth={isActive ? 2.5 : 1.75} />
+                                    )}
                                     {isSidebarOpen && (
                                         <div className="flex flex-col min-w-0">
-                                            <span className="text-sm font-bold truncate">{item.title}</span>
-                                            <span className={cn("text-[10px] opacity-70 truncate", isActive ? "text-white" : "text-slate-400")}>{item.description}</span>
+                                            <span className="text-sm truncate">{item.title}</span>
+                                            <span className={cn(
+                                                "text-[10px] opacity-70 truncate",
+                                                isActive ? "text-primary/80 dark:text-white/70" : "text-slate-400"
+                                            )}>{item.description}</span>
                                         </div>
                                     )}
                                 </Link>
